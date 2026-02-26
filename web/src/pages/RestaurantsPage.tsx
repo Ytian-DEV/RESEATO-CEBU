@@ -1,34 +1,44 @@
-import { useEffect, useMemo, useState } from 'react';
-import RestaurantCard from '../components/RestaurantCard';
-import type { Restaurant } from '../lib/types/restaurants';
-import { listRestaurants } from '../lib/api/restaurants.api';
+import { useEffect, useMemo, useState } from "react";
+import RestaurantCard from "../components/RestaurantCard";
+import type { Restaurant } from "../lib/types/restaurants";
+import { listRestaurants } from "../lib/api/restaurants.api";
 
 export default function RestaurantsPage() {
   const [items, setItems] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const [cuisine, setCuisine] = useState<string>('All');
+  const [error, setError] = useState<string | null>(null);
+
+  const [query, setQuery] = useState("");
+  const [cuisine, setCuisine] = useState("All");
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
 
-    listRestaurants()
-      .then((data) => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listRestaurants();
         if (!alive) return;
         setItems(data);
-      })
-      .finally(() => {
+      } catch (e: any) {
+        if (!alive) return;
+        setError(e?.message ?? "Failed to load restaurants");
+      } finally {
         if (!alive) return;
         setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       alive = false;
     };
   }, []);
 
-  const cuisines = useMemo(() => ['All', ...Array.from(new Set(items.map((r) => r.cuisine)))], [items]);
+  const cuisines = useMemo(
+    () => ["All", ...Array.from(new Set(items.map((r) => r.cuisine)))],
+    [items],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -39,10 +49,22 @@ export default function RestaurantsPage() {
         r.location.toLowerCase().includes(q) ||
         r.cuisine.toLowerCase().includes(q);
 
-      const matchesCuisine = cuisine === 'All' || r.cuisine === cuisine;
+      const matchesCuisine = cuisine === "All" || r.cuisine === cuisine;
       return matchesQuery && matchesCuisine;
     });
   }, [items, query, cuisine]);
+
+  if (loading) return <div className="p-6 text-neutral-200">Loading...</div>;
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-neutral-200">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-5">
@@ -50,7 +72,7 @@ export default function RestaurantsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Restaurants</h1>
           <p className="mt-1 text-neutral-300">
-            {loading ? 'Loading restaurants…' : 'Search and filter restaurants.'}
+            Search and filter restaurants.
           </p>
         </div>
 
@@ -75,25 +97,11 @@ export default function RestaurantsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-neutral-300">
-          Fetching restaurants…
-        </div>
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map((r) => (
-              <RestaurantCard key={r.id} r={r} />
-            ))}
-          </div>
-
-          {filtered.length === 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-neutral-300">
-              No restaurants match your search.
-            </div>
-          )}
-        </>
-      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {filtered.map((r) => (
+          <RestaurantCard key={r.id} r={r} />
+        ))}
+      </div>
     </section>
   );
 }
