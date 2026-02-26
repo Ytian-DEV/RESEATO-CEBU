@@ -3,11 +3,15 @@ import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 type Mode = "login" | "signup";
 type Role = "customer" | "vendor"; // UI only for now
 
 export default function AuthPage() {
+  const location = useLocation();
+  const redirectTo = (location.state as any)?.from ?? "/restaurants";
+
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -56,7 +60,7 @@ export default function AuthPage() {
         });
         if (error) throw error;
         setMsg("Logged in!");
-        navigate("/restaurants");
+        navigate(redirectTo, { replace: true });
       } else {
         // Signup
         const { error } = await supabase.auth.signUp({
