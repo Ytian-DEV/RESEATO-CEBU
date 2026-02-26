@@ -1,21 +1,48 @@
-# dependencies
+# =========================
+# Dependencies
+# =========================
 node_modules/
+**/node_modules/
 
-# build output
+# =========================
+# Build output
+# =========================
 dist/
+build/
+**/dist/
+**/build/
 
-# environment variables
+# =========================
+# Environment variables (CRITICAL)
+# =========================
 .env
-.env.local
+.env.*
+**/.env
+**/.env.*
 
-# logs
+# =========================
+# Logs
+# =========================
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
+# =========================
 # OS files
+# =========================
 .DS_Store
 Thumbs.db
 
-# editor
+# =========================
+# Editors / IDE
+# =========================
 .vscode/
 .idea/
+
+# =========================
+# Database / local storage
+# =========================
+*.sqlite
+*.db

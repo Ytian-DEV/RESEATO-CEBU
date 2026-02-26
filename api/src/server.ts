@@ -10,6 +10,19 @@ app.use(helmet());
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+
+app.use(
+  cors({
+    origin: WEB_ORIGIN,
+    credentials: true,
+  }),
+);
+
+app.get("/version", (_req, res) => {
+  res.json({ version: "0.1.0", env: process.env.NODE_ENV ?? "dev" });
+});
+
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -129,7 +142,6 @@ app.post("/reservations", async (req, res) => {
     .single();
 
   if (error) {
-    // Ideally inspect error.code/message for unique constraint, but 409 is fine for now.
     return res.status(409).json({ message: "Time slot already reserved" });
   }
 
