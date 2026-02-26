@@ -2,10 +2,8 @@ import { api } from './client';
 import type { Restaurant } from '../types/restaurants';
 
 export async function listRestaurants(): Promise<Restaurant[]> {
-  // later this becomes: return api<Restaurant[]>('/restaurants')
-  // for now, we keep a fallback mock while backend is not ready:
   try {
-    return await api<Restaurant[]>('/restaurants');
+    return await api<Restaurant[]>('/restaurants', { timeoutMs: 8000 });
   } catch {
     return [
       { id: '1', name: 'Baybay Bistro', cuisine: 'Filipino', location: 'Tacloban', rating: 4.6, priceLevel: 2 },

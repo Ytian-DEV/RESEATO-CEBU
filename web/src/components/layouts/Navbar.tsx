@@ -1,8 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-lg px-3 py-2 text-sm transition ${
-    isActive ? 'bg-white/10 text-white' : 'text-neutral-300 hover:bg-white/5 hover:text-white'
+    isActive
+      ? "bg-white/10 text-white"
+      : "text-neutral-300 hover:bg-white/5 hover:text-white"
   }`;
 
 export default function Navbar() {
@@ -17,6 +19,9 @@ export default function Navbar() {
           </NavLink>
           <NavLink to="/restaurants" className={linkClass}>
             Restaurants
+          </NavLink>
+          <NavLink to="/log-in-sign-up" className={linkClass}>
+            LogIn/SignUp
           </NavLink>
         </nav>
       </div>

@@ -1,11 +1,12 @@
-import { env } from '../config/env';
+import { env } from "../config/env";
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type RequestOptions = {
   method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
+  timeoutMs?: number;
 };
 
 export class ApiError extends Error {
@@ -14,29 +15,43 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, payload?: unknown) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.payload = payload;
   }
 }
 
-export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const url = `${env.API_BASE_URL}${path}`;
-  const res = await fetch(url, {
-    method: options.method ?? 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const timeoutMs = options.timeoutMs ?? 8000;
 
-  const text = await res.text();
-  const data = text ? (JSON.parse(text) as unknown) : undefined;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!res.ok) {
-    throw new ApiError('Request failed', res.status, data);
+  try {
+    const res = await fetch(url, {
+      method: options.method ?? "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    const data = text ? (JSON.parse(text) as unknown) : undefined;
+
+    if (!res.ok) throw new ApiError("Request failed", res.status, data);
+    return data as T;
+  } catch (err: any) {
+    if (err?.name === "AbortError")
+      throw new ApiError("Request timed out", 408);
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return data as T;
 }
