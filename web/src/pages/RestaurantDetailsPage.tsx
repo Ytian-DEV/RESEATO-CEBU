@@ -102,10 +102,10 @@ export default function RestaurantDetailsPage() {
               You must be logged in to make a reservation.
             </p>
             <Link
-              to="/login"
+              to="/log-in-sign-up"
               className="mt-3 inline-flex rounded-xl bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
             >
-              Go to Login
+              Go to Login/SignUp
             </Link>
           </div>
         ) : (

@@ -3,7 +3,7 @@ import AppShell from '../app/AppShell';
 import HomePage from '../pages/HomePage';
 import RestaurantsPage from '../pages/RestaurantsPage';
 import RestaurantDetailsPage from '../pages/RestaurantDetailsPage';
-import LoginPage from '../pages/LogInPage';
+import AuthPage from '../pages/AuthPage';
 
 export const router = createBrowserRouter([
   {
@@ -12,7 +12,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/restaurants', element: <RestaurantsPage /> },
       { path: '/restaurants/:id', element: <RestaurantDetailsPage /> },
-      { path: '/login', element: <LoginPage /> }
+      { path: '/log-in-sign-up', element: <AuthPage /> }
     ],
   },
 ]);
