@@ -1,25 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { getRestaurant, RestaurantDetails } from '../lib/api/restaurantDetails.api';
-import { createReservation, getSlots, Slot } from '../lib/api/reservations.api';
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  getRestaurant,
+  RestaurantDetails,
+} from "../lib/api/restaurantDetails.api";
+import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
+import { useAuth } from '../lib/auth/useAuth';
 
 function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
 export default function RestaurantDetailsPage() {
+  const { isAuthed, loading: authLoading } = useAuth();
   const { id } = useParams();
   const [data, setData] = useState<RestaurantDetails | null>(null);
 
   const [date, setDate] = useState(todayISO());
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [time, setTime] = useState<string>('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [time, setTime] = useState<string>("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [guests, setGuests] = useState(2);
 
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -38,14 +43,17 @@ export default function RestaurantDetailsPage() {
     getSlots(id, date)
       .then((r) => {
         setSlots(r.slots);
-        const first = r.slots.find((s) => s.available)?.time ?? '';
+        const first = r.slots.find((s) => s.available)?.time ?? "";
         setTime(first);
       })
       .catch(() => setSlots([]))
       .finally(() => setLoadingSlots(false));
   }, [id, date]);
 
-  const availableTimes = useMemo(() => slots.filter((s) => s.available), [slots]);
+  const availableTimes = useMemo(
+    () => slots.filter((s) => s.available),
+    [slots],
+  );
 
   async function onReserve() {
     if (!id) return;
@@ -62,7 +70,7 @@ export default function RestaurantDetailsPage() {
       });
       setMsg(`Reservation confirmed! Ref: ${res.id}`);
     } catch (e: any) {
-      setMsg(e?.payload?.message ?? 'Reservation failed');
+      setMsg(e?.payload?.message ?? "Reservation failed");
     } finally {
       setSubmitting(false);
     }
@@ -86,85 +94,45 @@ export default function RestaurantDetailsPage() {
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 className="text-xl font-semibold">Reserve a table</h2>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Date</div>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-white/20"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Time</div>
-            <select
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              disabled={loadingSlots || availableTimes.length === 0}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-white/20 disabled:opacity-60"
+        {authLoading ? (
+          <p className="mt-3 text-neutral-300">Checking session…</p>
+        ) : !isAuthed ? (
+          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-sm text-neutral-200">
+              You must be logged in to make a reservation.
+            </p>
+            <Link
+              to="/login"
+              className="mt-3 inline-flex rounded-xl bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
             >
-              {loadingSlots ? (
-                <option>Loading...</option>
-              ) : availableTimes.length === 0 ? (
-                <option>No available slots</option>
-              ) : (
-                availableTimes.map((s) => (
-                  <option key={s.time} value={s.time} className="bg-neutral-950">
-                    {s.time}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Your name</div>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Juan Dela Cruz"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none placeholder:text-neutral-500 focus:border-white/20"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Phone</div>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="09xxxxxxxxx"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none placeholder:text-neutral-500 focus:border-white/20"
-            />
-          </label>
-
-          <label className="space-y-1 sm:col-span-2">
-            <div className="text-sm text-neutral-300">Guests</div>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={guests}
-              onChange={(e) => setGuests(Number(e.target.value))}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-white/20"
-            />
-          </label>
-        </div>
-
-        {msg && (
-          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
-            {msg}
+              Go to Login
+            </Link>
           </div>
-        )}
+        ) : (
+          <>
+            {/* ✅ Put your existing reservation form UI here */}
+            {/* date/time/name/phone/guests + Confirm button */}
 
-        <button
-          onClick={onReserve}
-          disabled={submitting || !time || availableTimes.length === 0}
-          className="mt-4 w-full rounded-xl bg-white/10 px-6 py-3 text-sm font-medium hover:bg-white/20 disabled:opacity-60"
-        >
-          {submitting ? 'Reserving…' : 'Confirm reservation'}
-        </button>
+            {/* Example: keep your existing form exactly as-is */}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {/* ... your existing inputs ... */}
+            </div>
+
+            {msg && (
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                {msg}
+              </div>
+            )}
+
+            <button
+              onClick={onReserve}
+              disabled={submitting || !time || availableTimes.length === 0}
+              className="mt-4 w-full rounded-xl bg-white/10 px-6 py-3 text-sm font-medium hover:bg-white/20 disabled:opacity-60"
+            >
+              {submitting ? "Reserving…" : "Confirm reservation"}
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
