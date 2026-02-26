@@ -5,7 +5,8 @@ import {
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
 import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
-import { useAuth } from '../lib/auth/useAuth';
+import { useAuth } from "../lib/auth/useAuth";
+import { useLocation } from "react-router-dom";
 
 function todayISO() {
   const d = new Date();
@@ -16,6 +17,7 @@ function todayISO() {
 }
 
 export default function RestaurantDetailsPage() {
+  const location = useLocation();
   const { isAuthed, loading: authLoading } = useAuth();
   const { id } = useParams();
   const [data, setData] = useState<RestaurantDetails | null>(null);
@@ -102,10 +104,11 @@ export default function RestaurantDetailsPage() {
               You must be logged in to make a reservation.
             </p>
             <Link
-              to="/login"
+              to="/log-in-sign-up"
+              state={{ from: location.pathname }}
               className="mt-3 inline-flex rounded-xl bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
             >
-              Go to Login
+              Login / Sign up
             </Link>
           </div>
         ) : (
