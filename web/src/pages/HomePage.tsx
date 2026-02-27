@@ -78,7 +78,7 @@ export default function HomePage() {
 
       {/* Overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/75" />
-      <div className="absolute inset-0 bg-emerald-900/20" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(139, 36, 47, 0.35),rgba(92,37,43,0.45))]" />
 
       {/* Content (push down so navbar doesn't overlap) */}
       <motion.div

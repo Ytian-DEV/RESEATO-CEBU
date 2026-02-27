@@ -103,7 +103,7 @@ export default function AuthPage() {
         >
           <div className="space-y-6">
             <div className="inline-flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-white/10 grid place-items-center">
+              <div className="h-12 w-12 rounded-xl bg-[rgba(127,58,65,0.25)] grid place-items-center">
                 <span className="text-lg font-semibold">R</span>
               </div>
               <div>
@@ -116,7 +116,7 @@ export default function AuthPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6">
               <div className="text-xl font-semibold">
                 {mode === "login" ? "Welcome back" : "Create your account"}
               </div>
@@ -141,16 +141,16 @@ export default function AuthPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-10">
+          <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 md:p-10">
             {/* Toggle */}
-            <div className="flex rounded-xl border border-white/10 bg-black/20 p-1">
+            <div className="flex rounded-xl border border-[var(--maroon-border)] bg-black/20 p-1">
               <button
                 type="button"
                 onClick={() => setMode("login")}
                 className={`flex-1 rounded-lg px-3 py-2 text-sm ${
                   mode === "login"
-                    ? "bg-white/10 text-white"
-                    : "text-neutral-300 hover:bg-white/5"
+                    ? "bg-[rgba(127,58,65,0.25)] text-white"
+                    : "text-neutral-300 hover:bg-[var(--maroon-glass)]"
                 }`}
               >
                 Login
@@ -160,8 +160,8 @@ export default function AuthPage() {
                 onClick={() => setMode("signup")}
                 className={`flex-1 rounded-lg px-3 py-2 text-sm ${
                   mode === "signup"
-                    ? "bg-white/10 text-white"
-                    : "text-neutral-300 hover:bg-white/5"
+                    ? "bg-[rgba(127,58,65,0.25)] text-white"
+                    : "text-neutral-300 hover:bg-[var(--maroon-glass)]"
                 }`}
               >
                 Sign up
@@ -189,8 +189,8 @@ export default function AuthPage() {
                       onClick={() => setRole("customer")}
                       className={`rounded-xl border px-4 py-3 text-left ${
                         role === "customer"
-                          ? "border-white/20 bg-white/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                          ? "border-white/20 bg-[rgba(127,58,65,0.25)]"
+                          : "border-[var(--maroon-border)] bg-[var(--maroon-glass)] hover:bg-[rgba(127,58,65,0.25)]"
                       }`}
                     >
                       <div className="text-sm font-medium">Customer</div>
@@ -204,8 +204,8 @@ export default function AuthPage() {
                       onClick={() => setRole("vendor")}
                       className={`rounded-xl border px-4 py-3 text-left ${
                         role === "vendor"
-                          ? "border-white/20 bg-white/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                          ? "border-white/20 bg-[rgba(127,58,65,0.25)]"
+                          : "border-[var(--maroon-border)] bg-[var(--maroon-glass)] hover:bg-[rgba(127,58,65,0.25)]"
                       }`}
                     >
                       <div className="text-sm font-medium">
@@ -278,7 +278,7 @@ export default function AuthPage() {
                   type="checkbox"
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10"
+                  className="mt-1 h-4 w-4 rounded border-white/20 bg-[rgba(127,58,65,0.25)]"
                 />
                 <span>
                   I agree to the{" "}
@@ -287,7 +287,7 @@ export default function AuthPage() {
               </label>
 
               {msg && (
-                <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                <div className="rounded-xl border border-[var(--maroon-border)] bg-black/20 px-4 py-3 text-sm">
                   {msg}
                 </div>
               )}
@@ -295,7 +295,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={!canSubmit || loading}
-                className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20 disabled:opacity-60"
+                className="w-full rounded-xl bg-[rgba(127,58,65,0.25)] px-4 py-2 text-sm font-medium hover:bg-white/20 disabled:opacity-60"
               >
                 {loading
                   ? "Please wait..."
@@ -322,7 +322,7 @@ function Field(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-neutral-300">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] px-3 py-2">
         <span className="text-neutral-400">{props.icon}</span>
         <input
           type={props.type ?? "text"}
@@ -347,7 +347,7 @@ function PasswordField(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-neutral-300">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] px-3 py-2">
         <span className="text-neutral-400">{props.icon}</span>
         <input
           type={props.show ? "text" : "password"}

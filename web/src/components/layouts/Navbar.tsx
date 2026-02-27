@@ -3,10 +3,10 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/auth/useSession";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-lg px-3 py-2 text-sm transition ${
+  `relative rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
     isActive
-      ? "bg-white/10 text-white"
-      : "text-neutral-300 hover:bg-white/5 hover:text-white"
+      ? "text-white bg-[rgba(114,47,55,0.25)]"
+      : "text-white/70 hover:text-white hover:bg-[rgba(114,47,55,0.15)]"
   }`;
 
 export default function Navbar() {
@@ -19,14 +19,29 @@ export default function Navbar() {
   }
 
   return (
-    <header className="border-b border-white/10 bg-black/20 backdrop-blur">
+    <header
+      className="
+        sticky top-0 z-50
+        border-b border-[rgba(114,47,55,0.25)]
+        bg-[rgba(48, 27, 27, 0.65)]
+        backdrop-blur-xl
+      "
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div className="font-semibold tracking-wide">RESEATO</div>
+        {/* Logo */}
+        <div
+          onClick={() => navigate("/")}
+          className="cursor-pointer font-semibold tracking-wide text-white select-none"
+        >
+          RESEATO
+        </div>
 
+        {/* Navigation */}
         <nav className="flex items-center gap-2">
           <NavLink to="/" className={linkClass} end>
             Home
           </NavLink>
+
           <NavLink to="/restaurants" className={linkClass}>
             Restaurants
           </NavLink>
@@ -38,7 +53,13 @@ export default function Navbar() {
           ) : (
             <button
               onClick={logout}
-              className="rounded-lg px-3 py-2 text-sm text-neutral-300 hover:bg-white/5 hover:text-white transition"
+              className="
+                rounded-lg px-3 py-2 text-sm
+                text-white/70
+                hover:text-white
+                hover:bg-[rgba(114,47,55,0.15)]
+                transition-all
+              "
             >
               Logout
             </button>
