@@ -67,12 +67,12 @@ export default function RestaurantsPage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Restaurants</h1>
-          <p className="mt-1 text-neutral-300">
-            Search and filter restaurants.
+          <h1 className="text-2xl font-semibold text-white">Restaurants</h1>
+          <p className="mt-1 text-white/70">
+            Discover and reserve top dining experiences.
           </p>
         </div>
 
@@ -81,12 +81,34 @@ export default function RestaurantsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name, cuisine, location..."
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none placeholder:text-neutral-500 focus:border-white/20 sm:w-72"
+            className="
+          w-full sm:w-72
+          rounded-xl
+          border
+          border-[var(--maroon-border)]
+          bg-[var(--maroon-glass)]
+          px-4 py-2 text-sm
+          text-white
+          placeholder:text-white/40
+          outline-none
+          focus:border-[var(--maroon-light)]
+        "
           />
+
           <select
             value={cuisine}
             onChange={(e) => setCuisine(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-white/20 sm:w-56"
+            className="
+          w-full sm:w-56
+          rounded-xl
+          border
+          border-[var(--maroon-border)]
+          bg-[var(--maroon-glass)]
+          px-4 py-2 text-sm
+          text-white
+          outline-none
+          focus:border-[var(--maroon-light)]
+        "
           >
             {cuisines.map((c) => (
               <option key={c} value={c} className="bg-neutral-950">
@@ -97,7 +119,7 @@ export default function RestaurantsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         {filtered.map((r) => (
           <RestaurantCard key={r.id} r={r} />
         ))}

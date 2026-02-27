@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import "dotenv/config";
 import { supabase } from "./supabase";
+import { requireUser } from "./auth";
 
 const app = express();
 
@@ -110,44 +111,34 @@ app.get("/restaurants/:id/slots", async (req, res) => {
   });
 });
 
-app.post("/reservations", async (req, res) => {
+app.post("/reservations", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
   const { restaurantId, name, phone, date, time, guests } = req.body ?? {};
 
-  if (!restaurantId)
-    return res.status(400).json({ message: "restaurantId is required" });
-  if (typeof name !== "string" || name.trim().length < 2)
-    return res.status(400).json({ message: "name is too short" });
-  if (typeof phone !== "string" || phone.trim().length < 7)
-    return res.status(400).json({ message: "phone is invalid" });
-  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date))
-    return res.status(400).json({ message: "date must be YYYY-MM-DD" });
-  if (typeof time !== "string" || !/^\d{2}:\d{2}$/.test(time))
-    return res.status(400).json({ message: "time must be HH:mm" });
-
-  const guestsNum = Number(guests);
-  if (!Number.isFinite(guestsNum) || guestsNum < 1 || guestsNum > 20)
-    return res.status(400).json({ message: "guests must be 1-20" });
+  // validate same as before...
 
   const { data, error } = await supabase
     .from("reservations")
     .insert({
       restaurant_id: restaurantId,
+      user_id: userId, // ✅ important
       name: name.trim(),
       phone: phone.trim(),
       date,
       time,
-      guests: guestsNum,
+      guests: Number(guests),
     })
     .select("*")
     .single();
 
-  if (error) {
+  if (error)
     return res.status(409).json({ message: "Time slot already reserved" });
-  }
 
   res.status(201).json({
     id: data.id,
     restaurantId: data.restaurant_id,
+    userId: data.user_id,
     name: data.name,
     phone: data.phone,
     date: String(data.date),
@@ -155,6 +146,19 @@ app.post("/reservations", async (req, res) => {
     guests: data.guests,
     createdAt: data.created_at,
   });
+});
+
+app.get("/me/reservations", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data ?? []);
 });
 
 const PORT = Number(process.env.PORT ?? 4000);

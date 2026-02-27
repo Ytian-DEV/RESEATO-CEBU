@@ -1,18 +1,44 @@
-/* Google Fonts (keep — design identity) */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap");
 
-/* Tailwind layers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Base Reset ===== */
-*,
-*::before,
-*::after {
+/* Brand + Theme Tokens (maroon luxury) */
+:root {
+  --maroon-dark: #4a1e23;
+  --maroon: #5c252b;
+  --maroon-light: #7f3a41; /* ← NEW main UI maroon */
+  --maroon-soft: #9e5a5a; /* hover / accents */
+  --maroon-glass: rgba(127, 58, 65, 0.18);
+  --maroon-border: rgba(127, 58, 65, 0.35);
+
+  --primary-gradient: linear-gradient(135deg, #7f3a41 0%, #5c252b 100%);
+
+  --hero-gradient: linear-gradient(135deg, rgba(61, 25, 29, 0.92) 0%, rgba(74, 30, 35, 0.88) 100%);
+  --bg-pattern: url("https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+  --accent-gradient: linear-gradient(135deg, #b87d7d 0%, #9e5a5a 100%);
+  --maroon: #5c252b;
+  --maroon-light: #722f37;
+
+  /* NEW: app-wide theme tokens using the same vibe */
+  --bg: #0b0a0a; /* deep warm near-black */
+  --bg-elev: rgba(255, 255, 255, 0.04);
+  --fg: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.72);
+  --muted-2: rgba(255, 255, 255, 0.55);
+  --border: rgba(255, 255, 255, 0.1);
+
+  --focus: #722f37; /* maroon-light */
+}
+
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
+/* Ensure full-height layout everywhere */
 html,
 body,
 #root {
@@ -20,29 +46,319 @@ body,
 }
 
 body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #0a0a0a;
-  color: #ffffff;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* IMPORTANT: make base app match your maroon luxury theme */
+  background: var(--bg);
+  color: var(--fg);
 }
 
-/* Headings use serif branding */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-/* Smooth interactions */
-button,
+/* Scrollbar: dark + warm */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(184, 125, 125, 0.25); /* from accent family */
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 125, 125, 0.35);
+}
+
+/* Smooth transitions */
 a,
+button,
 input,
-select,
-textarea {
-  transition: all 0.2s ease;
+textarea,
+select {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Make default inputs look correct in dark theme */
+input,
+textarea,
+select {
+  color: var(--fg);
+}
+
+::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* Glass morphism effect (brand-friendly) */
+.glass {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(114, 47, 55, 0.2);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Hero background: slow Ken Burns (zoom + pan) */
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-1.5%, -1%);
+  }
+  100% {
+    transform: scale(1.12) translate(1%, 1.5%);
+  }
+}
+
+.hero-bg-motion {
+  animation: heroKenBurns 14s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Slower alternate for variety */
+@keyframes heroKenBurnsSlow {
+  0%,
+  100% {
+    transform: scale(1.05) translate(0, 0);
+  }
+  33% {
+    transform: scale(1.1) translate(1%, 0);
+  }
+  66% {
+    transform: scale(1.08) translate(-0.5%, 1%);
+  }
+}
+
+.hero-bg-motion-slow {
+  animation: heroKenBurnsSlow 30s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Shimmer loading effect (dark-friendly) */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.1) 20%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* Card hover effect (warm shadow) */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.45),
+    0 10px 10px -5px rgba(114, 47, 55, 0.12);
+}
+
+/* Button ripple effect */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  transform: translate(-50%, -50%);
+  transition:
+    width 0.6s,
+    height 0.6s;
+}
+
+.btn-ripple:active::before {
+  width: 320px;
+  height: 320px;
+}
+
+/* Gradient border (brand) */
+.gradient-border {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 2px;
+  background: var(--primary-gradient);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Custom checkbox (brand gradient) */
+.custom-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.custom-checkbox:checked {
+  background: var(--primary-gradient);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.custom-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Status colors (warm palette) */
+.status-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: rgba(245, 158, 11, 0.95);
+}
+
+.status-confirmed {
+  background: rgba(34, 197, 94, 0.15);
+  color: rgba(34, 197, 94, 0.95);
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.15);
+  color: rgba(239, 68, 68, 0.95);
+}
+
+.status-completed {
+  background: rgba(99, 102, 241, 0.15);
+  color: rgba(99, 102, 241, 0.95);
+}
+
+/* Luxurious accent elements */
+.warm-glow {
+  box-shadow: 0 0 30px rgba(114, 47, 55, 0.22);
+}
+
+.warm-border {
+  border: 1px solid rgba(114, 47, 55, 0.25);
+}
+
+/* Soft elevation */
+.soft-elevation {
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.soft-elevation-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.45),
+    0 4px 6px -2px rgba(0, 0, 0, 0.25);
 }
