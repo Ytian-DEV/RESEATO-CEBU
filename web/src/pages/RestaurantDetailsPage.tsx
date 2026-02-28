@@ -4,7 +4,8 @@ import {
   getRestaurant,
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
-import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
+import { getSlots, Slot } from "../lib/api/reservations.api";
+import { createReservationSupabase } from "../lib/api/reservations.supabase";
 import { useAuth } from "../lib/auth/useAuth";
 
 function todayISO() {
@@ -64,7 +65,7 @@ export default function RestaurantDetailsPage() {
     setMsg(null);
 
     try {
-      const res = await createReservation({
+      const res = await createReservationSupabase({
         restaurantId: id,
         name,
         phone,
@@ -159,10 +160,16 @@ export default function RestaurantDetailsPage() {
                   {loadingSlots ? (
                     <option className="bg-neutral-950">Loading slots…</option>
                   ) : availableTimes.length === 0 ? (
-                    <option className="bg-neutral-950">No available slots</option>
+                    <option className="bg-neutral-950">
+                      No available slots
+                    </option>
                   ) : (
                     availableTimes.map((s) => (
-                      <option key={s.time} value={s.time} className="bg-neutral-950">
+                      <option
+                        key={s.time}
+                        value={s.time}
+                        className="bg-neutral-950"
+                      >
                         {s.time}
                       </option>
                     ))
