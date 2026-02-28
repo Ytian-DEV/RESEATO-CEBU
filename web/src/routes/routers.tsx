@@ -6,6 +6,7 @@ import RestaurantDetailsPage from "../pages/RestaurantDetailsPage";
 import AuthPage from "../pages/AuthPage";
 import AboutPage from "../pages/AboutPage";
 import TermsPage from "../pages/TermsPage";
+import MyReservationsPage from "../pages/MyReservationsPage";
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
       { path: "/log-in-sign-up", element: <AuthPage /> },
       { path: "/about", element: <AboutPage /> },
       { path: "/terms", element: <TermsPage /> },
+      { path: "/my-reservations", element: <MyReservationsPage /> },
     ],
   },
 ]);

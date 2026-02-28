@@ -46,6 +46,12 @@ export default function Navbar() {
             Restaurants
           </NavLink>
 
+          {session && (
+            <NavLink to="/my-reservations" className={linkClass}>
+              My Reservations
+            </NavLink>
+          )}
+
           {!session ? (
             <NavLink to="/log-in-sign-up" className={linkClass}>
               Login / Sign up
