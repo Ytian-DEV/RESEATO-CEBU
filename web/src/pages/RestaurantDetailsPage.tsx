@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   getRestaurant,
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
-import { getSlots, Slot } from "../lib/api/reservations.api";
-import { createReservationSupabase } from "../lib/api/reservations.supabase";
+import {
+  createReservationSupabase,
+  getSlotsSupabase,
+  Slot,
+} from "../lib/api/reservations.supabase";
 import { useAuth } from "../lib/auth/useAuth";
 
 function todayISO() {
@@ -17,6 +20,7 @@ function todayISO() {
 }
 
 export default function RestaurantDetailsPage() {
+  const navigate = useNavigate();
   const location = useLocation();
   const { isAuthed, loading: authLoading } = useAuth();
   const { id } = useParams();
@@ -33,6 +37,7 @@ export default function RestaurantDetailsPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [successRef, setSuccessRef] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -44,13 +49,16 @@ export default function RestaurantDetailsPage() {
     setLoadingSlots(true);
     setMsg(null);
 
-    getSlots(id, date)
+    getSlotsSupabase(id, date)
       .then((r) => {
         setSlots(r.slots);
         const first = r.slots.find((s) => s.available)?.time ?? "";
         setTime(first);
       })
-      .catch(() => setSlots([]))
+      .catch((e) => {
+        setSlots([]);
+        setMsg(e?.message ?? "Failed to load slots");
+      })
       .finally(() => setLoadingSlots(false));
   }, [id, date]);
 
@@ -73,9 +81,20 @@ export default function RestaurantDetailsPage() {
         time,
         guests,
       });
-      setMsg(`Reservation confirmed! Ref: ${res.id}`);
+
+      setSuccessRef(res.id);
+
+      // refresh slots so the time becomes unavailable immediately
+      const refreshed = await getSlotsSupabase(id, date);
+      setSlots(refreshed.slots);
+
+      // reset form (keep date)
+      setName("");
+      setPhone("");
+      setGuests(2);
     } catch (e: any) {
-      setMsg(e?.payload?.message ?? e?.message ?? "Reservation failed");
+      setSuccessRef(null);
+      setMsg(e?.message ?? "Reservation failed");
     } finally {
       setSubmitting(false);
     }
@@ -102,6 +121,48 @@ export default function RestaurantDetailsPage() {
       <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 backdrop-blur-xl">
         <h2 className="text-xl font-semibold text-white">Reserve a table</h2>
 
+        {/* ✅ Success Panel */}
+        {successRef && (
+          <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-[rgba(0,0,0,0.25)] p-5">
+            <div className="text-white font-semibold text-lg">
+              ✅ Reservation placed!
+            </div>
+            <div className="mt-1 text-sm text-white/80">
+              Your reservation request has been recorded.
+            </div>
+            <div className="mt-2 text-xs text-white/60">
+              Reference: {successRef}
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate("/my-reservations")}
+                className="
+                  rounded-xl px-4 py-2 text-sm font-medium text-white
+                  border border-[rgba(127,58,65,0.45)]
+                  bg-[linear-gradient(135deg,#7f3a41,#5C252B)]
+                  hover:brightness-110 transition
+                "
+              >
+                View my reservations
+              </button>
+
+              <button
+                onClick={() => {
+                  setSuccessRef(null);
+                  setMsg(null);
+                }}
+                className="
+                  rounded-xl px-4 py-2 text-sm font-medium text-white
+                  border border-white/10 bg-white/5 hover:bg-white/10 transition
+                "
+              >
+                Make another reservation
+              </button>
+            </div>
+          </div>
+        )}
+
         {authLoading ? (
           <p className="mt-3 text-white/70">Checking session…</p>
         ) : !isAuthed ? (
@@ -124,7 +185,7 @@ export default function RestaurantDetailsPage() {
               Login / Sign up
             </Link>
           </div>
-        ) : (
+        ) : !successRef ? (
           <>
             {/* Reservation form */}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -253,7 +314,7 @@ export default function RestaurantDetailsPage() {
               {submitting ? "Reserving…" : "Confirm reservation"}
             </button>
           </>
-        )}
+        ) : null}
       </div>
     </section>
   );
