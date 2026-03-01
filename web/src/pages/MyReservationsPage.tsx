@@ -36,7 +36,9 @@ export default function MyReservationsPage() {
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter((r) =>
-      `${r.restaurant_id} ${r.status} ${r.id}`.toLowerCase().includes(q),
+      `${r.restaurant_id} ${r.status} ${r.id} ${r.name} ${r.phone}`
+        .toLowerCase()
+        .includes(q),
     );
   }, [items, query]);
 
