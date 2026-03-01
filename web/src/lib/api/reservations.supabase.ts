@@ -72,7 +72,15 @@ export async function createReservationSupabase(input: {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // Postgres unique violation (slot already taken)
+    if ((error as any).code === "23505") {
+      throw new Error(
+        "That time slot was just taken. Please choose another time.",
+      );
+    }
+    throw error;
+  }
   return data as ReservationRow;
 }
 
@@ -103,7 +111,9 @@ export async function listMyReservationsSupabase() {
     time: String(r.time).slice(0, 5),
   })) as ReservationRow[];
 
-  const ids = Array.from(new Set(rows.map((r) => r.restaurant_id))).filter(Boolean);
+  const ids = Array.from(new Set(rows.map((r) => r.restaurant_id))).filter(
+    Boolean,
+  );
 
   if (ids.length === 0) return rows as ReservationWithRestaurant[];
 
@@ -117,7 +127,12 @@ export async function listMyReservationsSupabase() {
   const map = new Map<string, RestaurantLite>(
     (restaurants ?? []).map((x: any) => [
       x.id,
-      { id: x.id, name: x.name, cuisine: x.cuisine ?? null, location: x.location ?? null },
+      {
+        id: x.id,
+        name: x.name,
+        cuisine: x.cuisine ?? null,
+        location: x.location ?? null,
+      },
     ]),
   );
 
@@ -126,7 +141,6 @@ export async function listMyReservationsSupabase() {
     restaurant: map.get(r.restaurant_id) ?? null,
   })) as ReservationWithRestaurant[];
 }
-
 
 export async function cancelReservationSupabase(reservationId: string) {
   const userId = await getAuthedUserId();
