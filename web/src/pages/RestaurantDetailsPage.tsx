@@ -4,8 +4,11 @@ import {
   getRestaurant,
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
-import { getSlots, Slot } from "../lib/api/reservations.api";
-import { createReservationSupabase } from "../lib/api/reservations.supabase";
+import {
+  getSlotsSupabase,
+  Slot,
+  createReservationSupabase,
+} from "../lib/api/reservations.supabase";
 import { useAuth } from "../lib/auth/useAuth";
 
 function todayISO() {
@@ -44,13 +47,16 @@ export default function RestaurantDetailsPage() {
     setLoadingSlots(true);
     setMsg(null);
 
-    getSlots(id, date)
+    getSlotsSupabase(id, date)
       .then((r) => {
         setSlots(r.slots);
         const first = r.slots.find((s) => s.available)?.time ?? "";
         setTime(first);
       })
-      .catch(() => setSlots([]))
+      .catch((e) => {
+        setSlots([]);
+        setMsg(e?.message ?? "Failed to load slots");
+      })
       .finally(() => setLoadingSlots(false));
   }, [id, date]);
 
@@ -74,6 +80,9 @@ export default function RestaurantDetailsPage() {
         guests,
       });
       setMsg(`Reservation confirmed! Ref: ${res.id}`);
+
+      const refreshed = await getSlotsSupabase(id, date);
+      setSlots(refreshed.slots);
     } catch (e: any) {
       setMsg(e?.payload?.message ?? e?.message ?? "Reservation failed");
     } finally {
