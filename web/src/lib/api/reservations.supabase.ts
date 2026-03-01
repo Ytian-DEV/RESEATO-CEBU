@@ -76,10 +76,21 @@ export async function createReservationSupabase(input: {
   return data as ReservationRow;
 }
 
+export type RestaurantLite = {
+  id: string;
+  name: string;
+  cuisine?: string | null;
+  location?: string | null;
+};
+
+export type ReservationWithRestaurant = ReservationRow & {
+  restaurant?: RestaurantLite | null;
+};
+
 export async function listMyReservationsSupabase() {
   const userId = await getAuthedUserId();
 
-  const { data, error } = await supabase
+  const { data: reservations, error } = await supabase
     .from("reservations")
     .select("*")
     .eq("user_id", userId)
@@ -87,12 +98,35 @@ export async function listMyReservationsSupabase() {
 
   if (error) throw error;
 
-  // normalize time to HH:mm for UI consistency
-  return (data ?? []).map((r: any) => ({
+  const rows = (reservations ?? []).map((r: any) => ({
     ...r,
     time: String(r.time).slice(0, 5),
   })) as ReservationRow[];
+
+  const ids = Array.from(new Set(rows.map((r) => r.restaurant_id))).filter(Boolean);
+
+  if (ids.length === 0) return rows as ReservationWithRestaurant[];
+
+  const { data: restaurants, error: restErr } = await supabase
+    .from("restaurants")
+    .select("id,name,cuisine,location")
+    .in("id", ids);
+
+  if (restErr) throw restErr;
+
+  const map = new Map<string, RestaurantLite>(
+    (restaurants ?? []).map((x: any) => [
+      x.id,
+      { id: x.id, name: x.name, cuisine: x.cuisine ?? null, location: x.location ?? null },
+    ]),
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    restaurant: map.get(r.restaurant_id) ?? null,
+  })) as ReservationWithRestaurant[];
 }
+
 
 export async function cancelReservationSupabase(reservationId: string) {
   const userId = await getAuthedUserId();

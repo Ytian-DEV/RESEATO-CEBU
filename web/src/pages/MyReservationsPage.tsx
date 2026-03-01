@@ -2,10 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 import {
   listMyReservationsSupabase,
   cancelReservationSupabase,
+  ReservationWithRestaurant,
 } from "../lib/api/reservations.supabase";
 
+function StatusBadge({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+
+  const cls =
+    s === "confirmed"
+      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+      : s === "cancelled"
+        ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
+        : s === "completed"
+          ? "border-sky-400/30 bg-sky-400/10 text-sky-200"
+          : "border-amber-400/30 bg-amber-400/10 text-amber-200";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${cls}`}
+    >
+      {s || "pending"}
+    </span>
+  );
+}
+
 export default function MyReservationsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<ReservationWithRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -35,11 +57,12 @@ export default function MyReservationsPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    return items.filter((r) =>
-      `${r.restaurant_id} ${r.status} ${r.id} ${r.name} ${r.phone}`
-        .toLowerCase()
-        .includes(q),
-    );
+
+    return items.filter((r) => {
+      const restaurantText = `${r.restaurant?.name ?? ""} ${r.restaurant?.location ?? ""} ${r.restaurant?.cuisine ?? ""}`;
+      const rowText = `${restaurantText} ${r.restaurant_id} ${r.status} ${r.id} ${r.name} ${r.phone} ${r.date} ${r.time} ${r.guests}`;
+      return rowText.toLowerCase().includes(q);
+    });
   }, [items, query]);
 
   async function onCancel(id: string) {
@@ -56,10 +79,7 @@ export default function MyReservationsPage() {
     <section className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">My Reservations</h1>
-          <p className="mt-1 text-white/70">
-            Your real reservations from Supabase.
-          </p>
+          <h1 className="text-2xl font-bold text-white">MY RESERVATIONS</h1>
         </div>
 
         <input
@@ -92,7 +112,11 @@ export default function MyReservationsPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="text-lg font-semibold text-white">
-                    Restaurant ID: {r.restaurant_id}
+                    {r.restaurant?.name ?? `Restaurant ${r.restaurant_id}`}
+                  </div>
+                  <div className="text-sm text-white/70">
+                    {r.restaurant?.cuisine ? `${r.restaurant.cuisine} • ` : ""}
+                    {r.restaurant?.location ?? ""}
                   </div>
                   <div className="text-sm text-white/70">
                     {r.date} • {r.time} • {r.guests} guests
@@ -100,8 +124,9 @@ export default function MyReservationsPage() {
                   <div className="mt-1 text-xs text-white/55">Ref: {r.id}</div>
                 </div>
 
-                <div className="text-sm text-white/80">
-                  Status: <span className="text-white">{r.status}</span>
+                <div className="text-sm text-white/80 flex items-center gap-2">
+                  <span>Status</span>
+                  <StatusBadge status={r.status} />
                 </div>
               </div>
 
