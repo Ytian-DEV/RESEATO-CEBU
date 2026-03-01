@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   getRestaurant,
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
-import { getSlots, Slot } from "../lib/api/reservations.api";
+import { getSlotsSupabase, Slot } from "../lib/api/reservations.supabase";
 import { createReservationSupabase } from "../lib/api/reservations.supabase";
 import { useAuth } from "../lib/auth/useAuth";
 
@@ -16,7 +16,24 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatPrettyDate(iso: string) {
+  // iso: YYYY-MM-DD
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function RestaurantDetailsPage() {
+  const navigate = useNavigate();
   const location = useLocation();
   const { isAuthed, loading: authLoading } = useAuth();
   const { id } = useParams();
@@ -29,10 +46,15 @@ export default function RestaurantDetailsPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [guests, setGuests] = useState(2);
+  const [note, setNote] = useState(""); // UI-only for now (not saved)
 
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const heroUrl = useMemo(() => {
+    return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2400&q=80&sat=-10";
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -41,10 +63,11 @@ export default function RestaurantDetailsPage() {
 
   useEffect(() => {
     if (!id) return;
+
     setLoadingSlots(true);
     setMsg(null);
 
-    getSlots(id, date)
+    getSlotsSupabase(id, date)
       .then((r) => {
         setSlots(r.slots);
         const first = r.slots.find((s) => s.available)?.time ?? "";
@@ -58,6 +81,22 @@ export default function RestaurantDetailsPage() {
     () => slots.filter((s) => s.available),
     [slots],
   );
+
+  const morningSlots = useMemo(
+    () => availableTimes.filter((s) => Number(s.time.slice(0, 2)) < 12),
+    [availableTimes],
+  );
+  const afternoonSlots = useMemo(
+    () => availableTimes.filter((s) => Number(s.time.slice(0, 2)) >= 12),
+    [availableTimes],
+  );
+
+  function decGuests() {
+    setGuests((g) => Math.max(1, g - 1));
+  }
+  function incGuests() {
+    setGuests((g) => Math.min(20, g + 1));
+  }
 
   async function onReserve() {
     if (!id) return;
@@ -73,7 +112,14 @@ export default function RestaurantDetailsPage() {
         time,
         guests,
       });
-      setMsg(`Reservation confirmed! Ref: ${res.id}`);
+
+      // wording: your status is pending, so don't say "confirmed"
+      setMsg(`Reservation request submitted! Ref: ${res.id}`);
+
+      // optional: reset small fields, keep date/time selection visible
+      // setName("");
+      // setPhone("");
+      // setNote("");
     } catch (e: any) {
       setMsg(e?.payload?.message ?? e?.message ?? "Reservation failed");
     } finally {
@@ -84,177 +130,376 @@ export default function RestaurantDetailsPage() {
   if (!data) return <div className="p-6 text-white/80">Loading...</div>;
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-8 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-semibold text-white">{data.name}</h1>
-        <p className="mt-1 text-white/70">
-          {data.cuisine} • {data.location}
-        </p>
-      </div>
+    <div className="relative">
+      {/* HERO */}
+      <div className="relative h-[380px] sm:h-[420px] overflow-hidden">
+        <img
+          src={heroUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* overlays */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(127,58,65,0.22),transparent_55%)]" />
 
-      {/* Description */}
-      <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 backdrop-blur-xl">
-        <p className="text-white/80 leading-relaxed">{data.description}</p>
-      </div>
+        <div className="relative mx-auto max-w-6xl px-6 pt-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              border border-white/15 bg-black/30 px-3 py-2
+              text-sm text-white/90 backdrop-blur
+              hover:bg-black/40 transition
+            "
+          >
+            <span aria-hidden>←</span> Back to Discovery
+          </button>
 
-      {/* Reservation */}
-      <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 backdrop-blur-xl">
-        <h2 className="text-xl font-semibold text-white">Reserve a table</h2>
-
-        {authLoading ? (
-          <p className="mt-3 text-white/70">Checking session…</p>
-        ) : !isAuthed ? (
-          <div className="mt-4 rounded-xl border border-[var(--maroon-border)] bg-[rgba(0,0,0,0.25)] p-4">
-            <p className="text-sm text-white/80">
-              You must be logged in to make a reservation.
-            </p>
-            <Link
-              to="/log-in-sign-up"
-              state={{ from: location.pathname }}
-              className="
-                mt-3 inline-flex rounded-xl
-                border border-[rgba(127,58,65,0.45)]
-                bg-[rgba(127,58,65,0.18)]
-                px-4 py-2 text-sm font-medium text-white
-                hover:bg-[rgba(127,58,65,0.28)]
-                transition
-              "
-            >
-              Login / Sign up
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* Reservation form */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {/* Date */}
-              <label className="space-y-1">
-                <div className="text-sm text-white/70">Date</div>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="
-                    w-full rounded-xl border border-[var(--maroon-border)]
-                    bg-[rgba(127,58,65,0.12)] px-3 py-2 text-sm text-white
-                    outline-none focus:border-[var(--maroon-light)]
-                  "
-                />
-              </label>
-
-              {/* Time */}
-              <label className="space-y-1">
-                <div className="text-sm text-white/70">Time</div>
-                <select
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  disabled={loadingSlots || availableTimes.length === 0}
-                  className="
-                    w-full rounded-xl border border-[var(--maroon-border)]
-                    bg-[rgba(127,58,65,0.12)] px-3 py-2 text-sm text-white
-                    outline-none focus:border-[var(--maroon-light)]
-                    disabled:opacity-60
-                  "
-                >
-                  {loadingSlots ? (
-                    <option className="bg-neutral-950">Loading slots…</option>
-                  ) : availableTimes.length === 0 ? (
-                    <option className="bg-neutral-950">
-                      No available slots
-                    </option>
-                  ) : (
-                    availableTimes.map((s) => (
-                      <option
-                        key={s.time}
-                        value={s.time}
-                        className="bg-neutral-950"
-                      >
-                        {s.time}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-
-              {/* Name */}
-              <label className="space-y-1">
-                <div className="text-sm text-white/70">Name</div>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your full name"
-                  className="
-                    w-full rounded-xl border border-[var(--maroon-border)]
-                    bg-[rgba(127,58,65,0.12)] px-3 py-2 text-sm text-white
-                    placeholder:text-white/40 outline-none
-                    focus:border-[var(--maroon-light)]
-                  "
-                />
-              </label>
-
-              {/* Phone */}
-              <label className="space-y-1">
-                <div className="text-sm text-white/70">Phone</div>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="09xxxxxxxxx"
-                  className="
-                    w-full rounded-xl border border-[var(--maroon-border)]
-                    bg-[rgba(127,58,65,0.12)] px-3 py-2 text-sm text-white
-                    placeholder:text-white/40 outline-none
-                    focus:border-[var(--maroon-light)]
-                  "
-                />
-              </label>
-
-              {/* Guests */}
-              <label className="space-y-1 sm:col-span-2">
-                <div className="text-sm text-white/70">Guests</div>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={guests}
-                  onChange={(e) => setGuests(Number(e.target.value))}
-                  className="
-                    w-full rounded-xl border border-[var(--maroon-border)]
-                    bg-[rgba(127,58,65,0.12)] px-3 py-2 text-sm text-white
-                    outline-none focus:border-[var(--maroon-light)]
-                  "
-                />
-              </label>
+          <div className="mt-10 sm:mt-14 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
+                {data.cuisine}
+              </span>
+              <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
+                ★ {Number(data.rating).toFixed(1)}
+              </span>
             </div>
 
-            {msg && (
-              <div className="mt-4 rounded-xl border border-[var(--maroon-border)] bg-[rgba(0,0,0,0.25)] px-4 py-3 text-sm text-white/80">
-                {msg}
-              </div>
-            )}
+            <h1 className="mt-3 text-4xl sm:text-5xl font-semibold text-white tracking-tight">
+              {data.name}
+            </h1>
 
-            <button
-              onClick={onReserve}
-              disabled={
-                submitting ||
-                !time ||
-                availableTimes.length === 0 ||
-                !name.trim() ||
-                !phone.trim()
-              }
-              className="
-                mt-4 w-full rounded-xl px-6 py-3 text-sm font-medium text-white
-                border border-[rgba(127,58,65,0.45)]
-                bg-[linear-gradient(135deg,#7f3a41,#5C252B)]
-                hover:brightness-110 transition
-                disabled:opacity-60
-              "
-            >
-              {submitting ? "Reserving…" : "Confirm reservation"}
-            </button>
-          </>
-        )}
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-white/80">
+              <span className="inline-flex items-center gap-2 text-sm">
+                <span aria-hidden>📍</span> {data.location}
+              </span>
+              <span className="text-white/30">•</span>
+              <span className="text-sm text-white/70">
+                Cebu dining • Reservations available
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+
+      {/* CONTENT */}
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <div className="-mt-16 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+          {/* LEFT: ABOUT */}
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.06)] p-6 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">
+                  About the Restaurant
+                </h2>
+                <span className="text-xs text-white/50">
+                  {data.priceLevel ? `Price: ${data.priceLevel}` : ""}
+                </span>
+              </div>
+
+              <div className="mt-4 text-white/80 leading-relaxed">
+                {data.description}
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-wider text-white/50">
+                    Contact details
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-white/80">
+                    <div className="flex items-center gap-2">
+                      <span aria-hidden>📞</span>
+                      <span>Contact not available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span aria-hidden>✉️</span>
+                      <span>support@reseato.com</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-wider text-white/50">
+                    Location
+                  </div>
+                  <div className="mt-3 text-sm text-white/80 flex items-center gap-2">
+                    <span aria-hidden>📍</span>
+                    <span>{data.location}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* optional extra section placeholder for future */}
+            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-6 backdrop-blur-xl">
+              <h3 className="text-base font-semibold text-white">
+                House notes
+              </h3>
+              <p className="mt-2 text-sm text-white/70">
+                Add policies here later (cancellation window, dress code, etc.).
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT: BOOKING (sticky) */}
+          <aside className="lg:sticky lg:top-6 h-fit">
+            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.06)] p-6 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    Book a Table
+                  </h2>
+                  <p className="mt-1 text-sm text-white/70">
+                    Secure your spot in seconds
+                  </p>
+                </div>
+                <div className="text-xs text-white/60">
+                  {formatPrettyDate(date)}
+                </div>
+              </div>
+
+              {authLoading ? (
+                <p className="mt-4 text-white/70">Checking session…</p>
+              ) : !isAuthed ? (
+                <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-black/25 p-4">
+                  <p className="text-sm text-white/80">
+                    You must be logged in to make a reservation.
+                  </p>
+                  <Link
+                    to="/log-in-sign-up"
+                    state={{ from: location.pathname }}
+                    className="
+                      mt-3 inline-flex w-full justify-center rounded-xl
+                      border border-[rgba(127,58,65,0.45)]
+                      bg-[rgba(127,58,65,0.18)]
+                      px-4 py-2 text-sm font-medium text-white
+                      hover:bg-[rgba(127,58,65,0.28)]
+                      transition
+                    "
+                  >
+                    Login / Sign up
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {/* Date */}
+                  <div className="mt-5">
+                    <div className="text-xs uppercase tracking-wider text-white/55">
+                      Select date
+                    </div>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="
+                        mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
+                        bg-black/20 px-4 py-3 text-sm text-white
+                        outline-none focus:border-[var(--maroon-light)]
+                      "
+                    />
+                  </div>
+
+                  {/* Guests stepper */}
+                  <div className="mt-5">
+                    <div className="text-xs uppercase tracking-wider text-white/55">
+                      Number of guests
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={decGuests}
+                        className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+                        aria-label="Decrease guests"
+                      >
+                        −
+                      </button>
+
+                      <div className="text-center">
+                        <div className="text-2xl font-semibold text-white">
+                          {guests}
+                        </div>
+                        <div className="text-xs text-white/60">Guests</div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={incGuests}
+                        className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+                        aria-label="Increase guests"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Time slots */}
+                  <div className="mt-5">
+                    <div className="text-xs uppercase tracking-wider text-white/55">
+                      Select time
+                    </div>
+
+                    <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+                      {loadingSlots ? (
+                        <div className="text-sm text-white/70">
+                          Loading slots…
+                        </div>
+                      ) : availableTimes.length === 0 ? (
+                        <div className="text-sm text-white/70">
+                          No available slots for this date.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {morningSlots.length > 0 && (
+                            <div>
+                              <div className="text-[11px] uppercase tracking-wider text-white/45">
+                                Morning
+                              </div>
+                              <div className="mt-2 grid grid-cols-3 gap-2">
+                                {morningSlots.map((s) => (
+                                  <button
+                                    type="button"
+                                    key={s.time}
+                                    onClick={() => setTime(s.time)}
+                                    className={cx(
+                                      "rounded-xl border px-3 py-2 text-sm transition",
+                                      time === s.time
+                                        ? "border-[rgba(127,58,65,0.75)] bg-[rgba(127,58,65,0.25)] text-white"
+                                        : "border-white/10 bg-white/5 text-white/85 hover:bg-white/10",
+                                    )}
+                                  >
+                                    {s.time}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {afternoonSlots.length > 0 && (
+                            <div>
+                              <div className="text-[11px] uppercase tracking-wider text-white/45">
+                                Afternoon
+                              </div>
+                              <div className="mt-2 grid grid-cols-3 gap-2">
+                                {afternoonSlots.map((s) => (
+                                  <button
+                                    type="button"
+                                    key={s.time}
+                                    onClick={() => setTime(s.time)}
+                                    className={cx(
+                                      "rounded-xl border px-3 py-2 text-sm transition",
+                                      time === s.time
+                                        ? "border-[rgba(127,58,65,0.75)] bg-[rgba(127,58,65,0.25)] text-white"
+                                        : "border-white/10 bg-white/5 text-white/85 hover:bg-white/10",
+                                    )}
+                                  >
+                                    {s.time}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2 text-[11px] text-white/45">
+                      Times shown are in 30-minute intervals.
+                    </div>
+                  </div>
+
+                  {/* Contact fields (kept for your current DB) */}
+                  <div className="mt-5 grid gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-white/55">
+                        Your name
+                      </div>
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Your full name"
+                        className="
+                          mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
+                          bg-black/20 px-4 py-3 text-sm text-white
+                          placeholder:text-white/35 outline-none
+                          focus:border-[var(--maroon-light)]
+                        "
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-white/55">
+                        Phone
+                      </div>
+                      <input
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="09xxxxxxxxx"
+                        className="
+                          mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
+                          bg-black/20 px-4 py-3 text-sm text-white
+                          placeholder:text-white/35 outline-none
+                          focus:border-[var(--maroon-light)]
+                        "
+                      />
+                    </div>
+                  </div>
+
+                  {/* Special requests (UI only) */}
+                  <div className="mt-5">
+                    <div className="text-xs uppercase tracking-wider text-white/55">
+                      Special requests
+                    </div>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="e.g., birthday celebration, window seat..."
+                      className="
+                        mt-2 w-full min-h-[92px] resize-none rounded-2xl
+                        border border-white/10 bg-black/20 px-4 py-3
+                        text-sm text-white placeholder:text-white/35 outline-none
+                        focus:border-[var(--maroon-light)]
+                      "
+                    />
+                  </div>
+
+                  {/* Message */}
+                  {msg && (
+                    <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-black/25 px-4 py-3 text-sm text-white/80">
+                      {msg}
+                    </div>
+                  )}
+
+                  {/* CTA */}
+                  <button
+                    onClick={onReserve}
+                    disabled={
+                      submitting ||
+                      !time ||
+                      availableTimes.length === 0 ||
+                      !name.trim() ||
+                      !phone.trim()
+                    }
+                    className="
+                      mt-5 w-full rounded-2xl px-6 py-3 text-sm font-medium text-white
+                      border border-[rgba(127,58,65,0.45)]
+                      bg-[linear-gradient(135deg,#7f3a41,#5C252B)]
+                      hover:brightness-110 transition
+                      disabled:opacity-60
+                    "
+                  >
+                    {submitting ? "Reserving…" : "Proceed"}
+                  </button>
+
+                  <div className="mt-2 text-[11px] text-white/45 text-center">
+                    No payment required now. You’ll pay at the restaurant.
+                  </div>
+                </>
+              )}
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
   );
 }
