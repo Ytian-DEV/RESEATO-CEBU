@@ -7,6 +7,7 @@ import AuthPage from "../pages/AuthPage";
 import AboutPage from "../pages/AboutPage";
 import TermsPage from "../pages/TermsPage";
 import MyReservationsPage from "../pages/MyReservationsPage";
+import ProfilePage from "../pages/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
       { path: "/about", element: <AboutPage /> },
       { path: "/terms", element: <TermsPage /> },
       { path: "/my-reservations", element: <MyReservationsPage /> },
+      { path: "/profile", element: <ProfilePage /> },
     ],
   },
 ]);
