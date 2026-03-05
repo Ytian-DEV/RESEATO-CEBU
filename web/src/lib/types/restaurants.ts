@@ -5,4 +5,6 @@ export type Restaurant = {
   location: string;
   rating: number;
   priceLevel: 1 | 2 | 3;
+  description?: string;
+  imageUrl?: string;
 };
