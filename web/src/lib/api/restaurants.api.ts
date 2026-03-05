@@ -1,15 +1,21 @@
-import { api } from './client';
-import type { Restaurant } from '../types/restaurants';
+import { supabase } from "../supabase";
 
-export async function listRestaurants(): Promise<Restaurant[]> {
-  try {
-    return await api<Restaurant[]>('/restaurants', { timeoutMs: 8000 });
-  } catch {
-    return [
-      { id: '1', name: 'Baybay Bistro', cuisine: 'Filipino', location: 'Tacloban', rating: 4.6, priceLevel: 2 },
-      { id: '2', name: 'Pangasugan Grill', cuisine: 'Seafood', location: 'Baybay', rating: 4.4, priceLevel: 2 },
-      { id: '3', name: 'Samar Spice House', cuisine: 'Asian Fusion', location: 'Catbalogan', rating: 4.2, priceLevel: 1 },
-      { id: '4', name: 'Green Table', cuisine: 'Healthy', location: 'Ormoc', rating: 4.7, priceLevel: 3 }
-    ];
-  }
+export async function listRestaurants() {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("id,name,cuisine,location,rating,price_level,description,image_url")
+    .order("rating", { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    cuisine: r.cuisine,
+    location: r.location,
+    rating: Number(r.rating),
+    priceLevel: r.price_level,
+    description: r.description ?? undefined,
+    imageUrl: r.image_url ?? undefined, 
+  }));
 }

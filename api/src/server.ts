@@ -7,21 +7,23 @@ import { requireUser } from "./auth";
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: true }));
-app.use(express.json());
-
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 
+app.use(helmet());
 app.use(
   cors({
     origin: WEB_ORIGIN,
     credentials: true,
   }),
 );
+app.use(express.json());
+
 
 app.get("/version", (_req, res) => {
-  res.json({ version: "0.1.0", env: process.env.NODE_ENV ?? "dev" });
+  res.json({
+    version: "0.1.0",
+    env: process.env.NODE_ENV ?? "dev",
+  });
 });
 
 app.get("/health", (_req, res) => {
@@ -32,26 +34,31 @@ app.get("/health", (_req, res) => {
   });
 });
 
+
 app.get("/restaurants", async (_req, res) => {
   const { data, error } = await supabase
     .from("restaurants")
     .select("*")
     .order("rating", { ascending: false });
 
-  if (error) return res.status(500).json({ message: error.message });
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
 
-  res.json(
-    (data ?? []).map((r: any) => ({
-      id: r.id,
-      name: r.name,
-      cuisine: r.cuisine,
-      location: r.location,
-      rating: Number(r.rating),
-      priceLevel: r.price_level,
-      description: r.description,
-    })),
-  );
+  const restaurants = (data ?? []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    cuisine: r.cuisine,
+    location: r.location,
+    rating: Number(r.rating),
+    priceLevel: r.price_level,
+    description: r.description,
+    imageUrl: r.image_url, // ⭐ NEW
+  }));
+
+  res.json(restaurants);
 });
+
 
 app.get("/restaurants/:id", async (req, res) => {
   const { data, error } = await supabase
@@ -60,8 +67,9 @@ app.get("/restaurants/:id", async (req, res) => {
     .eq("id", req.params.id)
     .single();
 
-  if (error || !data)
+  if (error || !data) {
     return res.status(404).json({ message: "Restaurant not found" });
+  }
 
   res.json({
     id: data.id,
@@ -71,15 +79,19 @@ app.get("/restaurants/:id", async (req, res) => {
     rating: Number(data.rating),
     priceLevel: data.price_level,
     description: data.description,
+    imageUrl: data.image_url, // ⭐ NEW
   });
 });
+
 
 app.get("/restaurants/:id/slots", async (req, res) => {
   const restaurantId = req.params.id;
   const date = String(req.query.date ?? "");
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res.status(400).json({ message: "Invalid date. Use YYYY-MM-DD" });
+    return res.status(400).json({
+      message: "Invalid date. Use YYYY-MM-DD",
+    });
   }
 
   const allSlots = [
@@ -98,7 +110,9 @@ app.get("/restaurants/:id/slots", async (req, res) => {
     .eq("restaurant_id", restaurantId)
     .eq("date", date);
 
-  if (error) return res.status(500).json({ message: error.message });
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
 
   const taken = new Set(
     (data ?? []).map((x: any) => String(x.time).slice(0, 5)),
@@ -107,22 +121,24 @@ app.get("/restaurants/:id/slots", async (req, res) => {
   res.json({
     restaurantId,
     date,
-    slots: allSlots.map((t) => ({ time: t, available: !taken.has(t) })),
+    slots: allSlots.map((t) => ({
+      time: t,
+      available: !taken.has(t),
+    })),
   });
 });
+
 
 app.post("/reservations", requireUser, async (req: any, res) => {
   const userId = req.user.id;
 
   const { restaurantId, name, phone, date, time, guests } = req.body ?? {};
 
-  // validate same as before...
-
   const { data, error } = await supabase
     .from("reservations")
     .insert({
       restaurant_id: restaurantId,
-      user_id: userId, // ✅ important
+      user_id: userId,
       name: name.trim(),
       phone: phone.trim(),
       date,
@@ -132,8 +148,9 @@ app.post("/reservations", requireUser, async (req: any, res) => {
     .select("*")
     .single();
 
-  if (error)
+  if (error) {
     return res.status(409).json({ message: "Time slot already reserved" });
+  }
 
   res.status(201).json({
     id: data.id,
@@ -148,6 +165,7 @@ app.post("/reservations", requireUser, async (req: any, res) => {
   });
 });
 
+
 app.get("/me/reservations", requireUser, async (req: any, res) => {
   const userId = req.user.id;
 
@@ -157,9 +175,16 @@ app.get("/me/reservations", requireUser, async (req: any, res) => {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error) return res.status(500).json({ message: error.message });
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
   res.json(data ?? []);
 });
 
+
 const PORT = Number(process.env.PORT ?? 4000);
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`API running on http://localhost:${PORT}`);
+});
