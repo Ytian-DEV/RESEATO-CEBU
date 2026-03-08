@@ -8,6 +8,7 @@ import {
   UsersRound,
   X,
   ArrowLeft,
+  CreditCard,
 } from "lucide-react";
 import {
   listMyReservationsSupabase,
@@ -27,6 +28,15 @@ const FILTERS: Array<{ key: StatusFilter; label: string }> = [
 
 function normalizeStatus(status: string | undefined) {
   return (status ?? "pending").toLowerCase();
+}
+
+function normalizePaymentStatus(status: string | undefined | null) {
+  const value = String(status ?? "unpaid").toLowerCase();
+  if (value === "processing") return "processing";
+  if (value === "paid") return "paid";
+  if (value === "failed") return "failed";
+  if (value === "cancelled") return "cancelled";
+  return "unpaid";
 }
 
 function toTimeLabel(raw: string) {
@@ -69,6 +79,14 @@ function statusPillClass(status: string) {
   if (s === "completed") return "bg-[#eaf4ff] text-[#1d5f93] border-[#bdd8f2]";
   if (s === "cancelled") return "bg-[#ffecec] text-[#a63d3d] border-[#f4c3c3]";
 
+  return "bg-[#fff5e5] text-[#9a6a19] border-[#f0d5a5]";
+}
+
+function paymentPillClass(paymentStatus: string) {
+  if (paymentStatus === "paid") return "bg-[#e6f7ef] text-[#227a4c] border-[#bfe6d0]";
+  if (paymentStatus === "processing") return "bg-[#eaf4ff] text-[#1d5f93] border-[#bdd8f2]";
+  if (paymentStatus === "failed") return "bg-[#ffecec] text-[#a63d3d] border-[#f4c3c3]";
+  if (paymentStatus === "cancelled") return "bg-[#f8eef2] text-[#7f3a41] border-[#e8ccd5]";
   return "bg-[#fff5e5] text-[#9a6a19] border-[#f0d5a5]";
 }
 
@@ -235,6 +253,11 @@ export default function MyReservationsPage() {
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             {visibleItems.map((row) => {
               const status = normalizeStatus(row.status);
+              const paymentStatus = normalizePaymentStatus(row.payment_status ?? null);
+              const canPay =
+                status !== "cancelled" &&
+                status !== "completed" &&
+                paymentStatus !== "paid";
 
               return (
                 <article
@@ -300,14 +323,37 @@ export default function MyReservationsPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onCancel(row.id)}
-                    disabled={status !== "pending"}
-                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#b44a53] px-4 py-2.5 text-sm font-medium text-[#f0b7be] transition hover:bg-[#4a1e23]/40 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/40 disabled:hover:bg-transparent"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel Reservation
-                  </button>
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-wide text-white/55">Payment</span>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${paymentPillClass(paymentStatus)}`}
+                      >
+                        {paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={`mt-5 grid gap-2 ${canPay ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+                    {canPay && (
+                      <Link
+                        to={`/payment/${row.id}`}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(127,58,65,0.55)] bg-[rgba(127,58,65,0.2)] px-4 py-2.5 text-sm font-medium text-[#f0b7be] transition hover:bg-[rgba(127,58,65,0.32)]"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Pay Reservation Fee
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={() => onCancel(row.id)}
+                      disabled={status !== "pending"}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#b44a53] px-4 py-2.5 text-sm font-medium text-[#f0b7be] transition hover:bg-[#4a1e23]/40 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/40 disabled:hover:bg-transparent"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel Reservation
+                    </button>
+                  </div>
 
                   <div className="mt-4 border-t border-white/10 pt-3 text-sm text-white/65">
                     <div className="flex items-center justify-between">

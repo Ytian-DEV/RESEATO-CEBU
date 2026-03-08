@@ -113,13 +113,8 @@ export default function RestaurantDetailsPage() {
         guests,
       });
 
-      // wording: your status is pending, so don't say "confirmed"
-      setMsg(`Reservation request submitted! Ref: ${res.id}`);
-
-      // optional: reset small fields, keep date/time selection visible
-      // setName("");
-      // setPhone("");
-      // setNote("");
+      setMsg(`Reservation created. Redirecting to payment for Ref: ${res.id}`);
+      navigate(`/payment/${res.id}`);
     } catch (e: any) {
       setMsg(e?.payload?.message ?? e?.message ?? "Reservation failed");
     } finally {
@@ -488,11 +483,11 @@ export default function RestaurantDetailsPage() {
                       disabled:opacity-60
                     "
                   >
-                    {submitting ? "Reserving…" : "Proceed"}
+                    {submitting ? "Reserving..." : "Proceed to Payment"}
                   </button>
 
                   <div className="mt-2 text-[11px] text-white/45 text-center">
-                    No payment required now. You’ll pay at the restaurant.
+                    Reservation payment is required to secure your slot.
                   </div>
                 </>
               )}
@@ -503,3 +498,4 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
+
