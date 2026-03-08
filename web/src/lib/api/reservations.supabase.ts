@@ -11,6 +11,13 @@ export type ReservationRow = {
   guests: number;
   status: "pending" | "confirmed" | "cancelled" | "completed" | string;
   created_at: string;
+  payment_status?: "unpaid" | "processing" | "paid" | "failed" | "cancelled" | string | null;
+  payment_amount?: number | null;
+  payment_provider?: string | null;
+  payment_checkout_session_id?: string | null;
+  payment_reference?: string | null;
+  payment_paid_at?: string | null;
+  payment_error?: string | null;
 };
 
 async function getAuthedUserId() {
@@ -34,7 +41,6 @@ export async function createReservationSupabase(input: {
 }) {
   const userId = await getAuthedUserId();
 
-  // OPTIONAL: basic client-side validation (still keep it)
   if (!input.name.trim()) throw new Error("Name is required");
   if (!input.phone.trim()) throw new Error("Phone is required");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date))
@@ -43,7 +49,6 @@ export async function createReservationSupabase(input: {
   if (!Number.isFinite(input.guests) || input.guests < 1)
     throw new Error("Guests must be at least 1");
 
-  // OPTIONAL: prevent double booking at UI layer (real protection should be unique constraint / RLS)
   const { data: existing, error: existingErr } = await supabase
     .from("reservations")
     .select("id")
@@ -73,7 +78,6 @@ export async function createReservationSupabase(input: {
     .single();
 
   if (error) {
-    // Postgres unique violation (slot already taken)
     if ((error as any).code === "23505") {
       throw new Error(
         "That time slot was just taken. Please choose another time.",
@@ -165,7 +169,6 @@ export type Slot = {
   available: boolean;
 };
 
-// keep consistent with your previous UI slot list
 const BASE_SLOTS = [
   "11:00",
   "11:30",
