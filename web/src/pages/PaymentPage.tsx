@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -53,7 +53,7 @@ export default function PaymentPage() {
 
   const statusQuery = searchParams.get("status");
 
-  async function loadDetails() {
+  const loadDetails = useCallback(async () => {
     if (!reservationId) return;
 
     setLoading(true);
@@ -65,11 +65,11 @@ export default function PaymentPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [reservationId]);
 
   useEffect(() => {
     loadDetails();
-  }, [reservationId]);
+  }, [loadDetails]);
 
   useEffect(() => {
     if (!reservationId) return;
@@ -96,7 +96,7 @@ export default function PaymentPage() {
         setMessage(error?.payload?.message ?? error?.message ?? "Payment status check failed.");
       }
     })();
-  }, [reservationId, statusQuery]);
+  }, [loadDetails, reservationId, statusQuery]);
 
   const feeLabel = useMemo(() => {
     if (!details) return formatAmount(100);
@@ -311,4 +311,6 @@ export default function PaymentPage() {
     </div>
   );
 }
+
+
 

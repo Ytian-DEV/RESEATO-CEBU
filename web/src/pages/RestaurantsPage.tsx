@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import RestaurantCard from "../components/RestaurantCard";
 import type { Restaurant } from "../lib/types/restaurants";
 import { listRestaurants } from "../lib/api/restaurants.api";
@@ -49,16 +49,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function formatToday() {
-  return new Date().toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export default function RestaurantsPage() {
-  const navigate = useNavigate();
 
   const [items, setItems] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
