@@ -4,5 +4,9 @@ export type Restaurant = {
   cuisine: string;
   location: string;
   rating: number;
-  priceLevel: 1 | 2 | 3;
+  priceLevel: 1 | 2 | 3 | 4;
+  description?: string;
+  imageUrl?: string;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 };
