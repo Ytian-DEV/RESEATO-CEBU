@@ -4,9 +4,10 @@ import {
   getRestaurant,
   RestaurantDetails,
 } from "../lib/api/restaurantDetails.api";
-import { getSlotsSupabase, Slot } from "../lib/api/reservations.supabase";
-import { createReservationSupabase } from "../lib/api/reservations.supabase";
+import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
 import { useAuth } from "../lib/auth/useAuth";
+import { ApiError } from "../lib/api/client";
+import { ArrowLeft, Mail, MapPin, Phone, Star } from "lucide-react";
 
 function todayISO() {
   const d = new Date();
@@ -32,6 +33,16 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    const payload = error.payload as { message?: string } | undefined;
+    return payload?.message ?? fallback;
+  }
+
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
 export default function RestaurantDetailsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,6 +59,7 @@ export default function RestaurantDetailsPage() {
   const [guests, setGuests] = useState(2);
   const [note, setNote] = useState(""); // UI-only for now (not saved)
 
+  const [loadingRestaurant, setLoadingRestaurant] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -58,23 +70,63 @@ export default function RestaurantDetailsPage() {
 
   useEffect(() => {
     if (!id) return;
-    getRestaurant(id).then(setData);
+    let alive = true;
+
+    async function loadRestaurant() {
+      try {
+        setLoadingRestaurant(true);
+        setMsg(null);
+        const restaurantId = id;
+        if (!restaurantId) return;
+
+        const details = await getRestaurant(restaurantId);
+        if (!alive) return;
+        setData(details);
+      } catch (error) {
+        if (!alive) return;
+        setData(null);
+        setMsg(getErrorMessage(error, "Unable to load restaurant details."));
+      } finally {
+        if (!alive) return;
+        setLoadingRestaurant(false);
+      }
+    }
+
+    loadRestaurant();
+
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
   useEffect(() => {
     if (!id) return;
+    let alive = true;
 
     setLoadingSlots(true);
     setMsg(null);
 
-    getSlotsSupabase(id, date)
+    getSlots(id, date)
       .then((r) => {
+        if (!alive) return;
         setSlots(r.slots);
         const first = r.slots.find((s) => s.available)?.time ?? "";
         setTime(first);
       })
-      .catch(() => setSlots([]))
-      .finally(() => setLoadingSlots(false));
+      .catch((error) => {
+        if (!alive) return;
+        setSlots([]);
+        setTime("");
+        setMsg(getErrorMessage(error, "Unable to load available slots."));
+      })
+      .finally(() => {
+        if (!alive) return;
+        setLoadingSlots(false);
+      });
+
+    return () => {
+      alive = false;
+    };
   }, [id, date]);
 
   const availableTimes = useMemo(
@@ -104,7 +156,7 @@ export default function RestaurantDetailsPage() {
     setMsg(null);
 
     try {
-      const res = await createReservationSupabase({
+      const res = await createReservation({
         restaurantId: id,
         name,
         phone,
@@ -122,7 +174,19 @@ export default function RestaurantDetailsPage() {
     }
   }
 
-  if (!data) return <div className="p-6 text-white/80">Loading...</div>;
+  if (loadingRestaurant) {
+    return <div className="p-6 text-white/80">Loading restaurant...</div>;
+  }
+
+  if (!data) {
+    return (
+      <div className="p-6">
+        <div className="rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
+          {msg ?? "Unable to load restaurant details."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -147,7 +211,7 @@ export default function RestaurantDetailsPage() {
               hover:bg-black/40 transition
             "
           >
-            <span aria-hidden>←</span> Back to Discovery
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Discovery
           </button>
 
           <div className="mt-10 sm:mt-14 max-w-3xl">
@@ -155,8 +219,8 @@ export default function RestaurantDetailsPage() {
               <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
                 {data.cuisine}
               </span>
-              <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
-                ★ {Number(data.rating).toFixed(1)}
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
+                <Star className="h-3.5 w-3.5" aria-hidden /> {Number(data.rating).toFixed(1)}
               </span>
             </div>
 
@@ -166,11 +230,11 @@ export default function RestaurantDetailsPage() {
 
             <div className="mt-3 flex flex-wrap items-center gap-3 text-white/80">
               <span className="inline-flex items-center gap-2 text-sm">
-                <span aria-hidden>📍</span> {data.location}
+                <MapPin className="h-3.5 w-3.5" aria-hidden /> {data.location}
               </span>
-              <span className="text-white/30">•</span>
+              <span className="text-white/30">�</span>
               <span className="text-sm text-white/70">
-                Cebu dining • Reservations available
+                Cebu dining � Reservations available
               </span>
             </div>
           </div>
@@ -203,12 +267,12 @@ export default function RestaurantDetailsPage() {
                   </div>
                   <div className="mt-3 space-y-2 text-sm text-white/80">
                     <div className="flex items-center gap-2">
-                      <span aria-hidden>📞</span>
-                      <span>Contact not available</span>
+                      <Phone className="h-3.5 w-3.5" aria-hidden />
+                      <span>{data.contactPhone || "Contact not available"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span aria-hidden>✉️</span>
-                      <span>support@reseato.com</span>
+                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      <span>{data.contactEmail || "support@reseato.com"}</span>
                     </div>
                   </div>
                 </div>
@@ -217,8 +281,8 @@ export default function RestaurantDetailsPage() {
                   <div className="text-xs uppercase tracking-wider text-white/50">
                     Location
                   </div>
-                  <div className="mt-3 text-sm text-white/80 flex items-center gap-2">
-                    <span aria-hidden>📍</span>
+                  <div className="mt-3 flex items-center gap-2 text-sm text-white/80">
+                    <MapPin className="h-3.5 w-3.5" aria-hidden />
                     <span>{data.location}</span>
                   </div>
                 </div>
@@ -254,7 +318,7 @@ export default function RestaurantDetailsPage() {
               </div>
 
               {authLoading ? (
-                <p className="mt-4 text-white/70">Checking session…</p>
+                <p className="mt-4 text-white/70">Checking session...</p>
               ) : !isAuthed ? (
                 <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-black/25 p-4">
                   <p className="text-sm text-white/80">
@@ -307,7 +371,7 @@ export default function RestaurantDetailsPage() {
                         className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
                         aria-label="Decrease guests"
                       >
-                        −
+                        -
                       </button>
 
                       <div className="text-center">
@@ -337,7 +401,7 @@ export default function RestaurantDetailsPage() {
                     <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-4">
                       {loadingSlots ? (
                         <div className="text-sm text-white/70">
-                          Loading slots…
+                          Loading slots...
                         </div>
                       ) : availableTimes.length === 0 ? (
                         <div className="text-sm text-white/70">
@@ -498,4 +562,12 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 

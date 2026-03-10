@@ -1,16 +1,10 @@
 import { useNavigate } from "react-router-dom";
+import type { Restaurant } from "../lib/types/restaurants";
 
-type Restaurant = {
-  id: string;
-  name: string;
-  cuisine: string;
-  location: string;
-  rating: number;
-  priceLevel: 1 | 2 | 3;
-  imageUrl?: string; // ✅ from Supabase
+const price = (level: number) => {
+  const normalized = Math.min(4, Math.max(1, Number(level) || 1));
+  return "?".repeat(normalized);
 };
-
-const price = (lvl: 1 | 2 | 3) => "₱".repeat(lvl);
 
 function RatingBadge({ value }: { value: number }) {
   const label = Number.isFinite(value) ? value.toFixed(1) : "0.0";
@@ -26,7 +20,7 @@ function RatingBadge({ value }: { value: number }) {
       "
       title={`Rating ${label}`}
     >
-      <span className="text-[10px] leading-none">★</span>
+      <span className="text-[10px] leading-none">?</span>
       <span>{label}</span>
     </div>
   );
@@ -43,9 +37,10 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
       role="button"
       tabIndex={0}
       onClick={() => navigate(`/restaurants/${r.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ")
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
           navigate(`/restaurants/${r.id}`);
+        }
       }}
       className="
         group overflow-hidden rounded-2xl
@@ -57,16 +52,14 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--maroon-light)]
       "
     >
-      {/* Image header */}
       <div className="relative h-36 w-full overflow-hidden">
         <img
           src={r.imageUrl || FALLBACK_IMG}
           alt={r.name}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          onError={(e) => {
-            // if DB image url is broken, fallback to a safe image
-            (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
+          onError={(event) => {
+            (event.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
@@ -83,7 +76,6 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -98,8 +90,8 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
           <div className="text-[11px] text-white/50">10:00 - 21:00</div>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={(event) => {
+              event.stopPropagation();
               navigate(`/restaurants/${r.id}`);
             }}
             className="
@@ -117,3 +109,5 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
     </div>
   );
 }
+
+
