@@ -75,9 +75,10 @@ function getNavItems(roleKind: RoleKind): NavItem[] {
 
   if (roleKind === "admin") {
     return [
-      { to: "/vendor", label: "Dashboard", end: true },
-      { to: "/vendor/restaurants", label: "Restaurants" },
-      { to: "/vendor/reservations", label: "Reservations" },
+      { to: "/admin", label: "Dashboard", end: true },
+      { to: "/admin/users", label: "Users" },
+      { to: "/admin/restaurants", label: "Restaurants" },
+      { to: "/admin/reservations", label: "Reservations" },
     ];
   }
 
@@ -249,10 +250,16 @@ export default function Navbar() {
   }
 
   function handleBrandClick() {
-    if (roleKind === "vendor" || roleKind === "admin") {
+    if (roleKind === "admin") {
+      navigate("/admin");
+      return;
+    }
+
+    if (roleKind === "vendor") {
       navigate("/vendor");
       return;
     }
+
     navigate("/");
   }
 

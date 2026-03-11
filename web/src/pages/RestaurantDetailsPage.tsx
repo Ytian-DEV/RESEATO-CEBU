@@ -232,9 +232,9 @@ export default function RestaurantDetailsPage() {
               <span className="inline-flex items-center gap-2 text-sm">
                 <MapPin className="h-3.5 w-3.5" aria-hidden /> {data.location}
               </span>
-              <span className="text-white/30">•</span>
+              <span className="text-white/30">ï¿½</span>
               <span className="text-sm text-white/70">
-                Cebu dining • Reservations available
+                Cebu dining ï¿½ Reservations available
               </span>
             </div>
           </div>
