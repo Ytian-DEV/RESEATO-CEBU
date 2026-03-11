@@ -8,7 +8,7 @@
 :root {
   --maroon-dark: #4a1e23;
   --maroon: #5c252b;
-  --maroon-light: #7f3a41; /* ← NEW main UI maroon */
+  --maroon-light: #7f3a41; /* Ã¢â€ Â NEW main UI maroon */
   --maroon-soft: #9e5a5a; /* hover / accents */
   --maroon-glass: rgba(127, 58, 65, 0.18);
   --maroon-border: rgba(127, 58, 65, 0.35);
@@ -116,6 +116,18 @@ select {
 
 ::placeholder {
   color: rgba(255, 255, 255, 0.38);
+}
+
+/* Keep select dropdown menus aligned to maroon theme */
+.maroon-select {
+  color-scheme: dark;
+  background-color: rgba(19, 10, 11, 0.86);
+  color: #f7dee1;
+}
+
+.maroon-select option {
+  background-color: #1f1113;
+  color: #f7dee1;
 }
 
 /* Glass morphism effect (brand-friendly) */
