@@ -510,12 +510,16 @@ export default function AuthPage() {
             </Link>
           </div>
 
-          <div className="grid min-h-[calc(100vh-80px)] w-full items-center gap-10 pt-14 md:grid-cols-2">
+          <div
+            className={`grid min-h-[calc(100vh-80px)] w-full gap-10 pt-14 md:grid-cols-2 ${
+              mode === "signup" ? "md:items-start" : "md:items-center"
+            }`}
+          >
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
-          className="hidden md:block"
+          className={`hidden md:block ${mode === "signup" ? "md:flex md:h-[78vh] md:items-center" : ""}`}
         >
           <div className="space-y-6">
             <div className="shrink-0">
@@ -551,7 +555,11 @@ export default function AuthPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="rounded-[24px] border border-[#e6e2e4] bg-white p-6 md:max-h-[78vh] md:overflow-y-auto md:p-10 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <div
+            className={`rounded-[24px] border border-[#e6e2e4] bg-white p-6 md:p-10 shadow-[0_18px_40px_rgba(15,23,42,0.08)] ${
+              mode === "signup" ? "md:h-[78vh] md:overflow-y-auto" : ""
+            }`}
+          >
             <div className="flex rounded-2xl border border-[#dccfd2] bg-[#f6edef] p-1.5">
               <button
                 type="button"
@@ -843,6 +851,7 @@ function PasswordField(props: {
     </label>
   );
 }
+
 
 
 
