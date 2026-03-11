@@ -4,11 +4,12 @@ import { Outlet, useLocation } from "react-router-dom";
 export default function AppShell() {
   const { pathname } = useLocation();
 
-  const fullBleed = pathname === "/" || pathname.startsWith("/restaurants/");
+  const isAuthPage = pathname === "/log-in-sign-up";
+  const fullBleed = isAuthPage || pathname === "/" || pathname.startsWith("/restaurants/");
 
   return (
     <div className="min-h-screen">
-      <Navbar />
+      {!isAuthPage && <Navbar />}
 
       {fullBleed ? (
         <main>
