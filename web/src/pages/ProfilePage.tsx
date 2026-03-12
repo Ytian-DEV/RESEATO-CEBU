@@ -139,16 +139,16 @@ async function upsertProfileWithFallback(payload: Record<string, unknown>) {
 
 function InfoRow(props: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="rounded-2xl border border-[#ece8e9] bg-[#fafafa] p-4">
       <div className="flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[var(--maroon-border)] bg-[rgba(127,58,65,0.12)] text-[#e6b9be]">
+        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#e0cfd4] bg-[#f8ecee] text-[#8b3d4a]">
           {props.icon}
         </div>
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
             {props.label}
           </div>
-          <div className="truncate text-sm font-medium text-white">
+          <div className="truncate text-sm font-medium text-[#1f2937]">
             {props.value || "Not provided"}
           </div>
         </div>
@@ -425,17 +425,17 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="py-10 text-white/70">Loading profile...</div>;
+    return <div className="py-10 text-[#6b7280]">Loading profile...</div>;
   }
 
   if (!isAuthed || !user) {
     return (
       <div className="py-12">
-        <div className="rounded-2xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/80">
+        <div className="rounded-2xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
           <p>You need to log in to view your profile.</p>
           <Link
             to="/log-in-sign-up"
-            className="mt-4 inline-flex rounded-xl border border-[var(--maroon-border)] bg-black/25 px-4 py-2 text-sm hover:bg-black/35"
+            className="mt-4 inline-flex rounded-xl border border-[#d8c0c6] bg-[#f8ecee] px-4 py-2 text-sm text-[#7b2f3b] hover:bg-[#f2dde2]"
           >
             Go to Login
           </Link>
@@ -445,39 +445,39 @@ export default function ProfilePage() {
   }
 
   if (!details) {
-    return <div className="py-10 text-white/70">Loading profile...</div>;
+    return <div className="py-10 text-[#6b7280]">Loading profile...</div>;
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[var(--bg)] text-[var(--fg)]">
+    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
       <section className="mx-auto max-w-5xl px-6 py-8">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--maroon-border)] bg-[var(--maroon-glass)] px-4 py-2 text-sm text-white/80 transition hover:text-white"
+          className="inline-flex items-center gap-2 rounded-full border border-[#ddd7d9] bg-white px-4 py-2 text-sm text-[#6b7280] shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:text-[#7b2f3b]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </button>
 
         {message && (
-          <div className="mt-5 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
+          <div className="mt-5 rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
             {message}
           </div>
         )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <article className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <article className="rounded-3xl border border-[#e8e2e3] bg-white p-8 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
             <div className="mx-auto grid w-fit place-items-center">
               <div className="relative">
                 {details.avatarUrl ? (
                   <img
                     src={details.avatarUrl}
                     alt="Profile"
-                    className="h-40 w-40 rounded-full border border-white/20 object-cover"
+                    className="h-40 w-40 rounded-full border border-[#e8e2e3] object-cover"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="grid h-40 w-40 place-items-center rounded-full bg-[rgba(255,255,255,0.08)] text-6xl font-semibold tracking-wide text-[#f0b7be]">
+                  <div className="grid h-40 w-40 place-items-center rounded-full bg-[#f8ecee] text-6xl font-semibold tracking-wide text-[#8b3d4a]">
                     {initials}
                   </div>
                 )}
@@ -486,7 +486,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={openAvatarPicker}
                   disabled={uploadingAvatar}
-                  className="absolute bottom-2 right-2 grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-[#7f3a41] text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
+                  className="absolute bottom-2 right-2 grid h-10 w-10 place-items-center rounded-full border border-[#d8c0c6] bg-[#8b3d4a] text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
                   aria-label="Change profile photo"
                 >
                   <Camera className="h-4 w-4" />
@@ -503,21 +503,21 @@ export default function ProfilePage() {
             </div>
 
             <div className="mt-7 text-center">
-              <h1 className="text-4xl font-semibold text-white">{details.fullName}</h1>
-              <p className="mt-2 text-2xl text-[#f0b7be]">{details.role} Account</p>
+              <h1 className="text-4xl font-semibold text-[#1f2937]">{details.fullName}</h1>
+              <p className="mt-2 text-2xl text-[#8b3d4a]">{details.role} Account</p>
               {uploadingAvatar && (
-                <p className="mt-2 text-sm text-white/65">Uploading photo...</p>
+                <p className="mt-2 text-sm text-[#6b7280]">Uploading photo...</p>
               )}
             </div>
           </article>
 
-          <article className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-6 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <article className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-4xl font-semibold text-white">Personal Information</h2>
+              <h2 className="text-4xl font-semibold text-[#1f2937]">Personal Information</h2>
 
               <button
                 onClick={() => setEditOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--maroon-border)] bg-black/20 px-3 py-2 text-sm font-medium text-white/85 transition hover:bg-black/30"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#d8c0c6] bg-[#f8ecee] px-3 py-2 text-sm font-medium text-[#7b2f3b] transition hover:bg-[#f2dde2]"
               >
                 <PencilLine className="h-4 w-4" />
                 Edit Details
@@ -551,22 +551,22 @@ export default function ProfilePage() {
       </section>
 
       {editOpen && (
-        <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 px-4">
+        <div className="fixed inset-0 z-[120] grid place-items-center bg-black/35 px-4">
           <form
             onSubmit={onSave}
-            className="w-full max-w-lg rounded-3xl border border-[var(--maroon-border)] bg-[#1a1416] p-6 shadow-2xl"
+            className="w-full max-w-lg rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_24px_52px_rgba(15,23,42,0.18)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-3xl font-semibold text-white">Edit Profile</h3>
-                <p className="mt-1 text-sm text-white/60">
+                <h3 className="text-3xl font-semibold text-[#1f2937]">Edit Profile</h3>
+                <p className="mt-1 text-sm text-[#6b7280]">
                   Update your personal account details.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditOpen(false)}
-                className="rounded-full border border-white/10 p-2 text-white/70 hover:text-white"
+                className="rounded-full border border-[#e8e2e3] p-2 text-[#6b7280] hover:text-[#7b2f3b]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -574,7 +574,7 @@ export default function ProfilePage() {
 
             <div className="mt-5 space-y-4">
               <label className="block">
-                <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
                   Full Name
                 </div>
                 <input
@@ -582,14 +582,14 @@ export default function ProfilePage() {
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, fullName: e.target.value }))
                   }
-                  className="mt-2 w-full rounded-xl border border-[var(--maroon-border)] bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-[#8b3e46]"
+                  className="mt-2 w-full rounded-xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#b46d73]"
                   placeholder="Your full name"
                   required
                 />
               </label>
 
               <label className="block">
-                <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
                   Phone Number
                 </div>
                 <input
@@ -597,13 +597,13 @@ export default function ProfilePage() {
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, phone: e.target.value }))
                   }
-                  className="mt-2 w-full rounded-xl border border-[var(--maroon-border)] bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-[#8b3e46]"
+                  className="mt-2 w-full rounded-xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#b46d73]"
                   placeholder="09XXXXXXXXX"
                 />
               </label>
 
               <label className="block">
-                <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
                   Account Role
                 </div>
                 <select
@@ -614,7 +614,7 @@ export default function ProfilePage() {
                       role: roleToOption(e.target.value),
                     }))
                   }
-                  className="mt-2 w-full rounded-xl border border-[var(--maroon-border)] bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-[#8b3e46]"
+                  className="mt-2 w-full rounded-xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#b46d73]"
                 >
                   <option value="customer">Customer</option>
                   <option value="vendor">Vendor</option>
@@ -626,7 +626,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setEditOpen(false)}
-                className="rounded-xl border border-white/10 bg-black/25 px-4 py-2 text-sm text-white/75 transition hover:bg-black/35"
+                className="rounded-xl border border-[#e8e2e3] bg-white px-4 py-2 text-sm text-[#6b7280] transition hover:bg-[#f9fafb]"
               >
                 Cancel
               </button>
