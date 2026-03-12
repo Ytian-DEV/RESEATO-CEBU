@@ -35,7 +35,6 @@ type PersonalInfo = {
 type EditForm = {
   fullName: string;
   phone: string;
-  role: "customer" | "vendor";
 };
 
 const AVATAR_BUCKET = "profile-photos";
@@ -95,11 +94,6 @@ function deriveFromMetadata(user: {
     (user.email ? user.email.split("@")[0] : "Customer");
 
   return { fullName, role, phone, avatarUrl };
-}
-
-function roleToOption(role: string): "customer" | "vendor" {
-  const normalized = role.trim().toLowerCase();
-  return normalized === "vendor" ? "vendor" : "customer";
 }
 
 async function upsertProfileWithFallback(payload: Record<string, unknown>) {
@@ -168,7 +162,6 @@ export default function ProfilePage() {
   const [form, setForm] = useState<EditForm>({
     fullName: "",
     phone: "",
-    role: "customer",
   });
 
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -196,7 +189,6 @@ export default function ProfilePage() {
         setForm({
           fullName: fallbackDetails.fullName,
           phone: fallbackDetails.phone,
-          role: roleToOption(fallbackDetails.role),
         });
       }
 
@@ -218,7 +210,6 @@ export default function ProfilePage() {
         const createAttempt = await upsertProfileWithFallback({
           id: user.id,
           full_name: fallback.fullName,
-          role: fallback.role,
           phone: fallback.phone || null,
           avatar_url: fallback.avatarUrl || null,
         });
@@ -247,7 +238,6 @@ export default function ProfilePage() {
       setForm({
         fullName: merged.fullName,
         phone: merged.phone,
-        role: roleToOption(merged.role),
       });
     }
 
@@ -312,7 +302,6 @@ export default function ProfilePage() {
       const profileAttempt = await upsertProfileWithFallback({
         id: user.id,
         full_name: details.fullName,
-        role: details.role.toLowerCase(),
         phone: details.phone || null,
         avatar_url: avatarUrl,
       });
@@ -359,7 +348,6 @@ export default function ProfilePage() {
 
     const cleanName = form.fullName.trim();
     const cleanPhone = form.phone.trim();
-    const cleanRole = form.role;
 
     let profileWarning: string | null = null;
 
@@ -367,7 +355,6 @@ export default function ProfilePage() {
       const upsert = await upsertProfileWithFallback({
         id: user.id,
         full_name: cleanName,
-        role: cleanRole,
         phone: cleanPhone || null,
         avatar_url: details.avatarUrl || null,
       });
@@ -393,7 +380,6 @@ export default function ProfilePage() {
           first_name: firstName,
           last_name: lastName,
           phone: cleanPhone,
-          role: cleanRole,
           avatar_url: details.avatarUrl,
         },
       });
@@ -404,7 +390,7 @@ export default function ProfilePage() {
         fullName: updatedProfile?.full_name?.trim() || cleanName,
         email: user.email ?? "",
         phone: updatedProfile?.phone?.trim() || cleanPhone,
-        role: capitalize(updatedProfile?.role?.trim() || cleanRole),
+        role: capitalize(updatedProfile?.role?.trim() || details.role),
         memberSince: details.memberSince,
         avatarUrl: updatedProfile?.avatar_url?.trim() || details.avatarUrl,
       };
@@ -413,7 +399,6 @@ export default function ProfilePage() {
       setForm({
         fullName: merged.fullName,
         phone: merged.phone,
-        role: roleToOption(merged.role),
       });
       setEditOpen(false);
       setMessage(profileWarning ?? "Profile updated.");
@@ -606,19 +591,14 @@ export default function ProfilePage() {
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
                   Account Role
                 </div>
-                <select
-                  value={form.role}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      role: roleToOption(e.target.value),
-                    }))
-                  }
-                  className="mt-2 w-full rounded-xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#b46d73]"
-                >
-                  <option value="customer">Customer</option>
-                  <option value="vendor">Vendor</option>
-                </select>
+                <input
+                  value={details.role}
+                  readOnly
+                  className="mt-2 w-full rounded-xl border border-[#ddd8da] bg-[#f9fafb] px-4 py-3 text-sm text-[#6b7280] outline-none"
+                />
+                <p className="mt-1 text-xs text-[#6b7280]">
+                  Account role is managed by admin.
+                </p>
               </label>
             </div>
 
@@ -644,3 +624,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
