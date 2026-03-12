@@ -8,7 +8,13 @@ export default function AppShell() {
   const isHomePage = pathname === "/";
   const hideNavbar = isAuthPage || isHomePage;
 
-  const fullBleed = hideNavbar || pathname.startsWith("/restaurants/");
+  const isCustomerFullBleed =
+    pathname.startsWith("/restaurants") ||
+    pathname === "/my-reservations" ||
+    pathname === "/profile" ||
+    pathname.startsWith("/payment/");
+
+  const fullBleed = hideNavbar || isCustomerFullBleed;
 
   return (
     <div className="min-h-screen">

@@ -172,11 +172,11 @@ export default function MyReservationsPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 bg-[var(--bg)] text-[var(--fg)]">
+    <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
       <section className="mx-auto max-w-5xl px-6 py-8 sm:py-10">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.05)] px-4 py-2 text-sm text-white/80 transition hover:text-white"
+          className="inline-flex items-center gap-2 rounded-full border border-[#ddd7d9] bg-white px-4 py-2 text-sm text-[#6b7280] shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:text-[#7b2f3b]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -188,28 +188,28 @@ export default function MyReservationsPage() {
           </div>
 
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-white">
+            <h1 className="text-4xl font-semibold tracking-tight text-[#1f2937]">
               My Reservations
             </h1>
-            <p className="mt-1 text-[15px] text-white/70">
+            <p className="mt-1 text-[15px] text-[#667085]">
               Manage your restaurant bookings
             </p>
           </div>
         </div>
 
         {msg && (
-          <div className="mt-6 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
+          <div className="mt-6 rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
             {msg}
           </div>
         )}
 
-        <div className="mt-7 rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-5 shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <div className="mt-7 rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="inline-flex items-center gap-2 text-base font-semibold text-white">
+            <div className="inline-flex items-center gap-2 text-base font-semibold text-[#1f2937]">
               <Filter className="h-4 w-4 text-[#8b3e46]" />
               Filter by Status
             </div>
-            <div className="text-sm text-white/65">
+            <div className="text-sm text-[#667085]">
               {visibleItems.length} reservation
               {visibleItems.length === 1 ? "" : "s"}
             </div>
@@ -225,8 +225,8 @@ export default function MyReservationsPage() {
                   onClick={() => setStatusFilter(filter.key)}
                   className={`rounded-full border px-4 py-2 text-sm transition ${
                     isActive
-                      ? "border-[#8b3e46] bg-[#8b3e46] text-white shadow-[0_6px_18px_rgba(139,62,70,0.28)]"
-                      : "border-white/10 bg-black/20 text-white/75 hover:bg-white/10"
+                      ? "border-[#c98d98] bg-[#8b3d4a] text-white shadow-[0_6px_18px_rgba(139,62,70,0.18)]"
+                      : "border-[#e6e1e3] bg-[#faf7f8] text-[#5b6374] hover:bg-[#f5eff1]"
                   }`}
                 >
                   {filter.label}
@@ -237,16 +237,16 @@ export default function MyReservationsPage() {
           </div>
         </div>
 
-        <h2 className="mt-8 text-3xl font-semibold tracking-tight text-white">
+        <h2 className="mt-8 text-3xl font-semibold tracking-tight text-[#1f2937]">
           {sectionTitle}
         </h2>
 
         {loading ? (
-          <div className="mt-5 rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/70 shadow-sm">
+          <div className="mt-5 rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#6b7280] shadow-[0_10px_26px_rgba(15,23,42,0.07)]">
             Loading reservations...
           </div>
         ) : visibleItems.length === 0 ? (
-          <div className="mt-5 rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/70 shadow-sm">
+          <div className="mt-5 rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#6b7280] shadow-[0_10px_26px_rgba(15,23,42,0.07)]">
             No reservations found for this status.
           </div>
         ) : (
@@ -262,14 +262,14 @@ export default function MyReservationsPage() {
               return (
                 <article
                   key={row.id}
-                  className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_18px_44px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+                  className="rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.08)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-2xl font-semibold text-white">
+                      <h3 className="text-2xl font-semibold text-[#1f2937]">
                         {row.restaurant?.name ?? `Restaurant ${row.restaurant_id}`}
                       </h3>
-                      <p className="mt-1 text-sm text-white/60">
+                      <p className="mt-1 text-sm text-[#6b7280]">
                         Booking ID: {row.id}
                       </p>
                     </div>
@@ -282,50 +282,50 @@ export default function MyReservationsPage() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                      <div className="inline-flex items-center gap-2 text-xs text-white/60">
+                    <div className="rounded-xl border border-[#ece8e9] bg-[#fafafa] p-3">
+                      <div className="inline-flex items-center gap-2 text-xs text-[#6b7280]">
                         <CalendarDays className="h-3.5 w-3.5 text-[#8b3e46]" />
                         Date
                       </div>
-                      <div className="mt-1 text-lg font-semibold text-white">
+                      <div className="mt-1 text-lg font-semibold text-[#1f2937]">
                         {toPrettyDate(row.date)}
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                      <div className="inline-flex items-center gap-2 text-xs text-white/60">
+                    <div className="rounded-xl border border-[#ece8e9] bg-[#fafafa] p-3">
+                      <div className="inline-flex items-center gap-2 text-xs text-[#6b7280]">
                         <Clock3 className="h-3.5 w-3.5 text-[#8b3e46]" />
                         Time
                       </div>
-                      <div className="mt-1 text-lg font-semibold text-white">
+                      <div className="mt-1 text-lg font-semibold text-[#1f2937]">
                         {toTimeLabel(row.time)}
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                      <div className="inline-flex items-center gap-2 text-xs text-white/60">
+                    <div className="rounded-xl border border-[#ece8e9] bg-[#fafafa] p-3">
+                      <div className="inline-flex items-center gap-2 text-xs text-[#6b7280]">
                         <UsersRound className="h-3.5 w-3.5 text-[#8b3e46]" />
                         Guests
                       </div>
-                      <div className="mt-1 text-lg font-semibold text-white">
+                      <div className="mt-1 text-lg font-semibold text-[#1f2937]">
                         {row.guests} {row.guests === 1 ? "Person" : "People"}
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                      <div className="inline-flex items-center gap-2 text-xs text-white/60">
+                    <div className="rounded-xl border border-[#ece8e9] bg-[#fafafa] p-3">
+                      <div className="inline-flex items-center gap-2 text-xs text-[#6b7280]">
                         <MapPin className="h-3.5 w-3.5 text-[#8b3e46]" />
                         Location
                       </div>
-                      <div className="mt-1 truncate text-sm font-medium text-white/90">
+                      <div className="mt-1 truncate text-sm font-medium text-[#374151]">
                         {row.restaurant?.location ?? "Location not available"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="mt-4 rounded-xl border border-[#ece8e9] bg-[#fafafa] p-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-wide text-white/55">Payment</span>
+                      <span className="text-xs uppercase tracking-wide text-[#6b7280]">Payment</span>
                       <span
                         className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${paymentPillClass(paymentStatus)}`}
                       >
@@ -338,7 +338,7 @@ export default function MyReservationsPage() {
                     {canPay && (
                       <Link
                         to={`/payment/${row.id}`}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(127,58,65,0.55)] bg-[rgba(127,58,65,0.2)] px-4 py-2.5 text-sm font-medium text-[#f0b7be] transition hover:bg-[rgba(127,58,65,0.32)]"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#d8c0c6] bg-[#f8ecee] px-4 py-2.5 text-sm font-medium text-[#7b2f3b] transition hover:bg-[#f2dde2]"
                       >
                         <CreditCard className="h-4 w-4" />
                         Pay Reservation Fee
@@ -348,23 +348,23 @@ export default function MyReservationsPage() {
                     <button
                       onClick={() => onCancel(row.id)}
                       disabled={status !== "pending"}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#b44a53] px-4 py-2.5 text-sm font-medium text-[#f0b7be] transition hover:bg-[#4a1e23]/40 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/40 disabled:hover:bg-transparent"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#d8c0c6] px-4 py-2.5 text-sm font-medium text-[#7b2f3b] transition hover:bg-[#f8ecee] disabled:cursor-not-allowed disabled:border-[#ece8e9] disabled:text-[#9ca3af] disabled:hover:bg-transparent"
                     >
                       <X className="h-4 w-4" />
                       Cancel Reservation
                     </button>
                   </div>
 
-                  <div className="mt-4 border-t border-white/10 pt-3 text-sm text-white/65">
+                  <div className="mt-4 border-t border-[#ece8e9] pt-3 text-sm text-[#667085]">
                     <div className="flex items-center justify-between">
                       <span>Restaurant</span>
-                      <span className="font-medium text-white">
+                      <span className="font-medium text-[#1f2937]">
                         {row.restaurant?.name ?? "Unavailable"}
                       </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between">
                       <span>Location</span>
-                      <span className="font-medium text-white">
+                      <span className="font-medium text-[#1f2937]">
                         {row.restaurant?.location ?? "Unavailable"}
                       </span>
                     </div>
@@ -376,14 +376,14 @@ export default function MyReservationsPage() {
         )}
       </section>
 
-      <div className="mt-12 h-16 bg-white/5" />
+      <div className="mt-12 h-16 bg-[#ebecef]" />
 
-      <footer className="bg-[#5c1f26] text-white">
+      <footer className="border-t border-[#e8e2e3] bg-white text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-14">
           <div className="grid gap-10 md:grid-cols-3">
             <div>
               <h3 className="text-3xl font-semibold tracking-wide">RESEATO</h3>
-              <p className="mt-4 max-w-xs text-sm text-white/80 leading-relaxed">
+              <p className="mt-4 max-w-xs text-sm text-[#667085] leading-relaxed">
                 Making restaurant reservations simple and elegant for Cebu's
                 best dining spots.
               </p>
@@ -391,14 +391,14 @@ export default function MyReservationsPage() {
 
             <div>
               <h4 className="text-xl font-semibold">Quick Links</h4>
-              <div className="mt-4 space-y-2 text-sm text-white/85">
-                <Link to="/restaurants" className="block hover:text-white">
+              <div className="mt-4 space-y-2 text-sm text-[#667085]">
+                <Link to="/restaurants" className="block hover:text-[#7b2f3b]">
                   Browse Restaurants
                 </Link>
-                <Link to="/my-reservations" className="block hover:text-white">
+                <Link to="/my-reservations" className="block hover:text-[#7b2f3b]">
                   My Reservations
                 </Link>
-                <Link to="/" className="block hover:text-white">
+                <Link to="/" className="block hover:text-[#7b2f3b]">
                   Home
                 </Link>
               </div>
@@ -406,7 +406,7 @@ export default function MyReservationsPage() {
 
             <div>
               <h4 className="text-xl font-semibold">Contact</h4>
-              <div className="mt-4 space-y-2 text-sm text-white/85">
+              <div className="mt-4 space-y-2 text-sm text-[#667085]">
                 <p>SM Seaside, Cebu City</p>
                 <p>support@reseato.com</p>
                 <p>+63 123 456 7890</p>
@@ -414,7 +414,7 @@ export default function MyReservationsPage() {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-white/15 pt-6 text-center text-sm text-white/70">
+          <div className="mt-10 border-t border-[#ece8e9] pt-6 text-center text-sm text-[#98a2b3]">
             © 2026 RESEATO. All rights reserved.
           </div>
         </div>
@@ -422,3 +422,5 @@ export default function MyReservationsPage() {
     </div>
   );
 }
+
+
