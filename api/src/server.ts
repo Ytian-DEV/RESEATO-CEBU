@@ -641,10 +641,13 @@ async function getActiveReservationCounts(restaurantId: string, date: string) {
   return counts;
 }
 
-async function insertRestaurantWithFallback(userId: string, payload: Record<string, unknown>) {
+async function insertRestaurantWithFallback(
+  ownerId: string | null,
+  payload: Record<string, unknown>,
+) {
   const currentPayload = {
     ...payload,
-    owner_id: userId,
+    owner_id: ownerId ?? null,
   } as Record<string, unknown>;
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -674,6 +677,40 @@ async function insertRestaurantWithFallback(userId: string, payload: Record<stri
   return supabase
     .from("restaurants")
     .insert(currentPayload)
+    .select("*")
+    .single();
+}
+
+async function updateRestaurantByIdWithFallback(
+  restaurantId: string,
+  payload: Record<string, unknown>,
+) {
+  const currentPayload = { ...payload } as Record<string, unknown>;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const result = await supabase
+      .from("restaurants")
+      .update(currentPayload)
+      .eq("id", restaurantId)
+      .select("*")
+      .single();
+
+    if (!result.error) return result;
+    if (!isUndefinedColumnError(result.error)) return result;
+
+    const missingColumn = getMissingColumnName(result.error);
+    if (missingColumn && missingColumn in currentPayload) {
+      delete currentPayload[missingColumn];
+      continue;
+    }
+
+    return result;
+  }
+
+  return supabase
+    .from("restaurants")
+    .update(currentPayload)
+    .eq("id", restaurantId)
     .select("*")
     .single();
 }
@@ -2861,6 +2898,168 @@ app.get("/admin/restaurants", requireUser, async (req: any, res) => {
   }
 });
 
+
+app.post("/admin/restaurants", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+
+  try {
+    await ensureAdminRole(actorId);
+
+    const body = req.body ?? {};
+    const name = String(body.name ?? "").trim();
+    const cuisine = String(body.cuisine ?? "").trim();
+    const location = String(body.location ?? "").trim();
+
+    if (!name || !cuisine || !location) {
+      return res.status(400).json({ message: "Name, cuisine, and location are required." });
+    }
+
+    const ownerIdRaw = String(body.ownerId ?? "").trim();
+    const ownerId = ownerIdRaw || null;
+
+    if (ownerId) {
+      const ownerRole = await getUserRole(ownerId);
+      const isAssignableVendor =
+        ownerRole === "vendor" || ownerRole === "owner" || ownerRole === "manager";
+
+      if (!isAssignableVendor) {
+        return res.status(400).json({
+          message: "Assigned owner must be a vendor account.",
+        });
+      }
+
+      const ownerLookup = await supabase.auth.admin.getUserById(ownerId);
+      if (ownerLookup.error || !ownerLookup.data?.user) {
+        return res.status(400).json({ message: "Assigned vendor account was not found." });
+      }
+    }
+
+    const payload = {
+      name,
+      cuisine,
+      location,
+      rating: Number.isFinite(Number(body.rating)) ? Number(body.rating) : 0,
+      price_level: parsePositiveInt(body.priceLevel, 1, 1, 4),
+      description: String(body.description ?? "").trim() || null,
+      image_url: String(body.imageUrl ?? "").trim() || null,
+      contact_phone: String(body.contactPhone ?? "").trim() || null,
+      contact_email: String(body.contactEmail ?? "").trim() || null,
+      total_tables: parsePositiveInt(body.totalTables, 10, 1, 999),
+    };
+
+    const { data, error } = await insertRestaurantWithFallback(ownerId, payload);
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    const created = data as any;
+    const ownerMap = await getUserIdentityMap(
+      created?.owner_id ? [String(created.owner_id)] : [],
+    );
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "restaurant_create",
+      targetType: "restaurant",
+      targetId: String(created.id),
+      payload: {
+        name,
+        cuisine,
+        location,
+        ownerId,
+      },
+    });
+
+    return res.status(201).json(
+      mapRestaurantRow(
+        created,
+        created?.owner_id ? ownerMap.get(String(created.owner_id)) ?? null : null,
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to create restaurant" });
+  }
+});
+
+app.patch("/admin/restaurants/:restaurantId/owner", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+  const restaurantId = String(req.params.restaurantId ?? "").trim();
+
+  if (!restaurantId) {
+    return res.status(400).json({ message: "restaurantId is required" });
+  }
+
+  try {
+    await ensureAdminRole(actorId);
+
+    const ownerIdRaw = String(req.body?.ownerId ?? "").trim();
+    const ownerId = ownerIdRaw || null;
+
+    if (ownerId) {
+      const ownerRole = await getUserRole(ownerId);
+      const isAssignableVendor =
+        ownerRole === "vendor" || ownerRole === "owner" || ownerRole === "manager";
+
+      if (!isAssignableVendor) {
+        return res.status(400).json({
+          message: "Assigned owner must be a vendor account.",
+        });
+      }
+
+      const ownerLookup = await supabase.auth.admin.getUserById(ownerId);
+      if (ownerLookup.error || !ownerLookup.data?.user) {
+        return res.status(400).json({ message: "Assigned vendor account was not found." });
+      }
+    }
+
+    const { data, error } = await updateRestaurantByIdWithFallback(restaurantId, {
+      owner_id: ownerId,
+    });
+
+    if (error && isUndefinedColumnError(error)) {
+      return res.status(500).json({
+        message: "Restaurant owner assignment is unavailable (owner_id column missing).",
+      });
+    }
+
+    if (error) {
+      if (String(error?.code ?? "").toUpperCase() === "PGRST116") {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      return res.status(500).json({ message: error.message });
+    }
+
+    const updated = data as any;
+    const ownerMap = await getUserIdentityMap(
+      updated?.owner_id ? [String(updated.owner_id)] : [],
+    );
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "restaurant_owner_assign",
+      targetType: "restaurant",
+      targetId: restaurantId,
+      payload: {
+        ownerId,
+      },
+    });
+
+    return res.json(
+      mapRestaurantRow(
+        updated,
+        updated?.owner_id ? ownerMap.get(String(updated.owner_id)) ?? null : null,
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({
+      message: error?.message ?? "Failed to update restaurant owner",
+    });
+  }
+});
+
 app.get("/admin/reservations", requireUser, async (req: any, res) => {
   const userId = req.user.id;
 
@@ -3092,6 +3291,12 @@ const PORT = Number(process.env.PORT ?? 4000);
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
+
+
+
+
+
+
 
 
 
