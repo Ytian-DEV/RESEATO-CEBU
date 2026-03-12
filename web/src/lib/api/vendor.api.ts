@@ -258,5 +258,121 @@ export function decideVendorReservation(
     },
   );
 }
+export type VendorChartPoint = {
+  date: string;
+  total: number;
+  completed: number;
+  cancelled: number;
+  pending: number;
+  confirmed: number;
+  paid: number;
+  revenueMinor: number;
+};
 
+export type VendorChartsResponse = {
+  from: string;
+  to: string;
+  days: VendorChartPoint[];
+  summary: {
+    totalReservations: number;
+    totalCompleted: number;
+    totalCancelled: number;
+    totalPending: number;
+    totalConfirmed: number;
+    totalPaid: number;
+    totalRevenueMinor: number;
+    completionRate: number;
+    cancellationRate: number;
+  };
+};
+
+export type VendorBestSeller = {
+  id: string;
+  restaurantId: string;
+  restaurantName: string | null;
+  name: string;
+  priceMinor: number;
+  imageUrl: string | null;
+  stockQuantity: number;
+  soldCount: number;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type VendorBestSellerInput = {
+  name: string;
+  priceMinor: number;
+  imageUrl?: string;
+  stockQuantity?: number;
+  soldCount?: number;
+  isActive?: boolean;
+};
+
+export function getVendorCharts(params?: { from?: string; to?: string }) {
+  const search = new URLSearchParams();
+
+  if (params?.from) search.set("from", params.from);
+  if (params?.to) search.set("to", params.to);
+
+  const query = search.toString();
+  const path = query ? `/vendor/charts?${query}` : "/vendor/charts";
+
+  return api<VendorChartsResponse>(path);
+}
+
+export function listVendorBestSellers(params?: {
+  restaurantId?: string;
+  active?: "all" | "true" | "false";
+  limit?: number;
+}) {
+  const search = new URLSearchParams();
+
+  if (params?.restaurantId) search.set("restaurantId", params.restaurantId);
+  if (params?.active) search.set("active", params.active);
+  if (typeof params?.limit === "number") search.set("limit", String(params.limit));
+
+  const query = search.toString();
+  const path = query ? `/vendor/best-sellers?${query}` : "/vendor/best-sellers";
+
+  return api<VendorBestSeller[]>(path);
+}
+
+export function listVendorRestaurantBestSellers(restaurantId: string) {
+  return api<VendorBestSeller[]>(`/vendor/restaurants/${restaurantId}/best-sellers`);
+}
+
+export function createVendorBestSeller(
+  restaurantId: string,
+  payload: VendorBestSellerInput,
+) {
+  return api<VendorBestSeller>(`/vendor/restaurants/${restaurantId}/best-sellers`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function updateVendorBestSeller(
+  restaurantId: string,
+  itemId: string,
+  payload: Partial<VendorBestSellerInput>,
+) {
+  return api<VendorBestSeller>(
+    `/vendor/restaurants/${restaurantId}/best-sellers/${itemId}`,
+    {
+      method: "PATCH",
+      body: payload,
+    },
+  );
+}
+
+export function deleteVendorBestSeller(restaurantId: string, itemId: string) {
+  return api<{ ok: boolean; id: string }>(
+    `/vendor/restaurants/${restaurantId}/best-sellers/${itemId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
 

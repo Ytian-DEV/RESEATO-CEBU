@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   getRestaurant,
@@ -7,7 +8,7 @@ import {
 import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
 import { useAuth } from "../lib/auth/useAuth";
 import { ApiError } from "../lib/api/client";
-import { ArrowLeft, Mail, MapPin, Phone, Star } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone, Star, TrendingUp, UtensilsCrossed } from "lucide-react";
 
 function todayISO() {
   const d = new Date();
@@ -18,7 +19,6 @@ function todayISO() {
 }
 
 function formatPrettyDate(iso: string) {
-  // iso: YYYY-MM-DD
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
   const dt = new Date(y, m - 1, d);
@@ -29,6 +29,13 @@ function formatPrettyDate(iso: string) {
   });
 }
 
+function toPesoFromMinor(minor: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format((Number(minor) || 0) / 100);
+}
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -57,7 +64,7 @@ export default function RestaurantDetailsPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [guests, setGuests] = useState(2);
-  const [note, setNote] = useState(""); // UI-only for now (not saved)
+  const [note, setNote] = useState("");
 
   const [loadingRestaurant, setLoadingRestaurant] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -67,6 +74,7 @@ export default function RestaurantDetailsPage() {
   const heroUrl =
     data?.imageUrl ??
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2400&q=80&sat=-10";
+  const bestSellers = data?.bestSellers ?? [];
 
   useEffect(() => {
     if (!id) return;
@@ -175,216 +183,294 @@ export default function RestaurantDetailsPage() {
   }
 
   if (loadingRestaurant) {
-    return <div className="p-6 text-white/80">Loading restaurant...</div>;
+    return (
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
+        <div className="pointer-events-none absolute -left-20 -top-16 h-64 w-64 rounded-full bg-[#f2dde2] blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-[#f8ecee] blur-3xl" />
+
+        <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-6xl flex-col justify-center px-6 py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="mb-6 flex items-center gap-3"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: "linear" }}
+              className="grid h-11 w-11 place-items-center rounded-xl bg-[#8b3d4a] text-white shadow-[0_10px_22px_rgba(139,61,74,0.26)]"
+            >
+              <UtensilsCrossed className="h-5 w-5" />
+            </motion.div>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#8b3d4a]">RESEATO</div>
+              <div className="text-lg font-medium text-[#374151]">Preparing restaurant details...</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            animate={{ opacity: [0.55, 1, 0.55] }}
+            transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+            className="rounded-[28px] border border-[#e8e2e3] bg-white p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08)]"
+          >
+            <div className="h-8 w-64 rounded-xl bg-[#f3ecef]" />
+            <div className="mt-4 h-4 w-[520px] max-w-full rounded-lg bg-[#f4eff1]" />
+            <div className="mt-2 h-4 w-[460px] max-w-full rounded-lg bg-[#f4eff1]" />
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="h-24 rounded-2xl bg-[#f2e5e8]" />
+              <div className="h-24 rounded-2xl bg-[#f2e5e8]" />
+            </div>
+          </motion.div>
+
+          <div className="mt-6 text-sm text-[#7b8498]">Loading restaurant...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!data) {
     return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
-          {msg ?? "Unable to load restaurant details."}
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-10">
+          <div className="rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
+            {msg ?? "Unable to load restaurant details."}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative">
-      {/* HERO */}
-      <div className="relative h-[380px] sm:h-[420px] overflow-hidden">
+    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative h-[380px] overflow-hidden sm:h-[420px]">
         <img
           src={heroUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />
-        {/* overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/20" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(127,58,65,0.22),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(127,58,65,0.18),transparent_55%)]" />
 
         <div className="relative mx-auto max-w-6xl px-6 pt-6">
           <button
             onClick={() => navigate(-1)}
-            className="
-              inline-flex items-center gap-2 rounded-xl
-              border border-white/15 bg-black/30 px-3 py-2
-              text-sm text-white/90 backdrop-blur
-              hover:bg-black/40 transition
-            "
+            className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-2 text-sm text-white backdrop-blur transition hover:bg-white/25"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Discovery
           </button>
 
-          <div className="mt-10 sm:mt-14 max-w-3xl">
+          <div className="mt-10 max-w-3xl sm:mt-14">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
+              <span className="rounded-full border border-white/20 bg-white/18 px-3 py-1 text-xs text-white/95 backdrop-blur">
                 {data.cuisine}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/85 backdrop-blur">
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/18 px-3 py-1 text-xs text-white/95 backdrop-blur">
                 <Star className="h-3.5 w-3.5" aria-hidden /> {Number(data.rating).toFixed(1)}
               </span>
             </div>
 
-            <h1 className="mt-3 text-4xl sm:text-5xl font-semibold text-white tracking-tight">
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
               {data.name}
             </h1>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-white/80">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-white/90">
               <span className="inline-flex items-center gap-2 text-sm">
                 <MapPin className="h-3.5 w-3.5" aria-hidden /> {data.location}
               </span>
-              <span className="text-white/30">�</span>
-              <span className="text-sm text-white/70">
-                Cebu dining � Reservations available
+              <span className="text-white/40">|</span>
+              <span className="text-sm text-white/85">
+                Cebu dining | Reservations available
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* CONTENT */}
       <section className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="-mt-16 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          {/* LEFT: ABOUT */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="space-y-6">
-            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.06)] p-6 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1)]">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-xl font-semibold text-[#1f2937] sm:text-2xl">
                   About the Restaurant
                 </h2>
-                <span className="text-xs text-white/50">
+                <span className="text-xs text-[#6b7280]">
                   {data.priceLevel ? `Price: ${data.priceLevel}` : ""}
                 </span>
               </div>
 
-              <div className="mt-4 text-white/80 leading-relaxed">
+              <div className="mt-4 leading-relaxed text-[#475467]">
                 {data.description}
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-wider text-white/50">
+                <div className="rounded-2xl border border-[#ece8e9] bg-[#fafafa] p-4">
+                  <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                     Contact details
                   </div>
-                  <div className="mt-3 space-y-2 text-sm text-white/80">
+                  <div className="mt-3 space-y-2 text-sm text-[#374151]">
                     <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5" aria-hidden />
+                      <Phone className="h-3.5 w-3.5 text-[#8b3d4a]" aria-hidden />
                       <span>{data.contactPhone || "Contact not available"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      <Mail className="h-3.5 w-3.5 text-[#8b3d4a]" aria-hidden />
                       <span>{data.contactEmail || "support@reseato.com"}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-wider text-white/50">
+                <div className="rounded-2xl border border-[#ece8e9] bg-[#fafafa] p-4">
+                  <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                     Location
                   </div>
-                  <div className="mt-3 flex items-center gap-2 text-sm text-white/80">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden />
+                  <div className="mt-3 flex items-center gap-2 text-sm text-[#374151]">
+                    <MapPin className="h-3.5 w-3.5 text-[#8b3d4a]" aria-hidden />
                     <span>{data.location}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* optional extra section placeholder for future */}
-            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-6 backdrop-blur-xl">
-              <h3 className="text-base font-semibold text-white">
-                House notes
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+              <h3 className="text-lg font-semibold text-[#1f2937] sm:text-xl">
+                House rules
               </h3>
-              <p className="mt-2 text-sm text-white/70">
-                Add policies here later (cancellation window, dress code, etc.).
+              <p className="mt-2 text-sm text-[#667085]">
+                Please arrive 10 minutes early. Reservations may be released after a short grace period,
+                and special requests are subject to availability.
               </p>
+            </div>
+
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-lg font-semibold text-[#1f2937] sm:text-xl">Best Sellers</h3>
+                <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-xs font-medium text-[#6b7280]">
+                  {bestSellers.length} item{bestSellers.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-[#667085]">
+                Popular picks you might want to try when you dine in.
+              </p>
+
+              {bestSellers.length === 0 ? (
+                <div className="mt-4 rounded-2xl border border-[#ece8e9] bg-[#fafafa] px-4 py-3 text-sm text-[#667085]">
+                  No best-seller items available yet for this restaurant.
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {bestSellers.map((item) => (
+                    <article
+                      key={item.id}
+                      className="overflow-hidden rounded-2xl border border-[#ece8e9] bg-[#fcfcfd]"
+                    >
+                      <div className="relative h-40 overflow-hidden">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#f7ebee_0%,#f5f7fb_100%)] text-[#8b3d4a]">
+                            <UtensilsCrossed className="h-8 w-8" aria-hidden />
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+                        <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/35 bg-black/35 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
+                          <TrendingUp className="h-3 w-3" aria-hidden /> {item.soldCount} sold
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <div className="text-base font-semibold text-[#1f2937]">{item.name}</div>
+                        <div className="mt-1 text-xs text-[#6b7280]">
+                          {item.stockQuantity > 0
+                            ? `${item.stockQuantity} in stock`
+                            : "Limited availability"}
+                        </div>
+                        <div className="mt-3 text-lg font-semibold text-[#7b2f3b]">
+                          {toPesoFromMinor(item.priceMinor)}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* RIGHT: BOOKING (sticky) */}
-          <aside className="lg:sticky lg:top-6 h-fit">
-            <div className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.06)] p-6 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+          <aside className="h-fit lg:sticky lg:top-6">
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">
+                  <h2 className="text-xl font-semibold text-[#1f2937] sm:text-2xl">
                     Book a Table
                   </h2>
-                  <p className="mt-1 text-sm text-white/70">
+                  <p className="mt-1 text-sm text-[#6b7280]">
                     Secure your spot in seconds
                   </p>
                 </div>
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-[#667085]">
                   {formatPrettyDate(date)}
                 </div>
               </div>
 
               {authLoading ? (
-                <p className="mt-4 text-white/70">Checking session...</p>
+                <p className="mt-4 text-[#6b7280]">Checking session...</p>
               ) : !isAuthed ? (
-                <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-black/25 p-4">
-                  <p className="text-sm text-white/80">
+                <div className="mt-4 rounded-2xl border border-[#e8e2e3] bg-[#fafafa] p-4">
+                  <p className="text-sm text-[#475467]">
                     You must be logged in to make a reservation.
                   </p>
                   <Link
                     to="/log-in-sign-up"
                     state={{ from: location.pathname }}
-                    className="
-                      mt-3 inline-flex w-full justify-center rounded-xl
-                      border border-[rgba(127,58,65,0.45)]
-                      bg-[rgba(127,58,65,0.18)]
-                      px-4 py-2 text-sm font-medium text-white
-                      hover:bg-[rgba(127,58,65,0.28)]
-                      transition
-                    "
+                    className="mt-3 inline-flex w-full justify-center rounded-xl border border-[#d8c0c6] bg-[#f8ecee] px-4 py-2 text-sm font-medium text-[#7b2f3b] transition hover:bg-[#f2dde2]"
                   >
                     Login / Sign up
                   </Link>
                 </div>
               ) : (
                 <>
-                  {/* Date */}
                   <div className="mt-5">
-                    <div className="text-xs uppercase tracking-wider text-white/55">
+                    <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                       Select date
                     </div>
                     <input
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="
-                        mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
-                        bg-black/20 px-4 py-3 text-sm text-white
-                        outline-none focus:border-[var(--maroon-light)]
-                      "
+                      className="mt-2 w-full rounded-2xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#b46d73]"
                     />
                   </div>
 
-                  {/* Guests stepper */}
                   <div className="mt-5">
-                    <div className="text-xs uppercase tracking-wider text-white/55">
+                    <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                       Number of guests
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <div className="mt-2 flex items-center justify-between rounded-2xl border border-[#ece8e9] bg-[#fafafa] px-4 py-3">
                       <button
                         type="button"
                         onClick={decGuests}
-                        className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+                        className="h-10 w-10 rounded-full border border-[#ddd8da] bg-white text-[#1f2937] transition hover:bg-[#f5f2f3]"
                         aria-label="Decrease guests"
                       >
                         -
                       </button>
 
                       <div className="text-center">
-                        <div className="text-2xl font-semibold text-white">
+                        <div className="text-2xl font-semibold text-[#1f2937]">
                           {guests}
                         </div>
-                        <div className="text-xs text-white/60">Guests</div>
+                        <div className="text-xs text-[#667085]">Guests</div>
                       </div>
 
                       <button
                         type="button"
                         onClick={incGuests}
-                        className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+                        className="h-10 w-10 rounded-full border border-[#ddd8da] bg-white text-[#1f2937] transition hover:bg-[#f5f2f3]"
                         aria-label="Increase guests"
                       >
                         +
@@ -392,26 +478,23 @@ export default function RestaurantDetailsPage() {
                     </div>
                   </div>
 
-                  {/* Time slots */}
                   <div className="mt-5">
-                    <div className="text-xs uppercase tracking-wider text-white/55">
+                    <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                       Select time
                     </div>
 
-                    <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="mt-2 rounded-2xl border border-[#ece8e9] bg-[#fafafa] p-4">
                       {loadingSlots ? (
-                        <div className="text-sm text-white/70">
-                          Loading slots...
-                        </div>
+                        <div className="text-sm text-[#667085]">Loading slots...</div>
                       ) : availableTimes.length === 0 ? (
-                        <div className="text-sm text-white/70">
+                        <div className="text-sm text-[#667085]">
                           No available slots for this date.
                         </div>
                       ) : (
                         <div className="space-y-4">
                           {morningSlots.length > 0 && (
                             <div>
-                              <div className="text-[11px] uppercase tracking-wider text-white/45">
+                              <div className="text-[11px] uppercase tracking-wider text-[#7b8498]">
                                 Morning
                               </div>
                               <div className="mt-2 grid grid-cols-3 gap-2">
@@ -423,8 +506,8 @@ export default function RestaurantDetailsPage() {
                                     className={cx(
                                       "rounded-xl border px-3 py-2 text-sm transition",
                                       time === s.time
-                                        ? "border-[rgba(127,58,65,0.75)] bg-[rgba(127,58,65,0.25)] text-white"
-                                        : "border-white/10 bg-white/5 text-white/85 hover:bg-white/10",
+                                        ? "border-[#c98d98] bg-[#f8ecee] text-[#7b2f3b]"
+                                        : "border-[#ddd8da] bg-white text-[#374151] hover:bg-[#f7f3f4]",
                                     )}
                                   >
                                     {s.time}
@@ -436,7 +519,7 @@ export default function RestaurantDetailsPage() {
 
                           {afternoonSlots.length > 0 && (
                             <div>
-                              <div className="text-[11px] uppercase tracking-wider text-white/45">
+                              <div className="text-[11px] uppercase tracking-wider text-[#7b8498]">
                                 Afternoon
                               </div>
                               <div className="mt-2 grid grid-cols-3 gap-2">
@@ -448,8 +531,8 @@ export default function RestaurantDetailsPage() {
                                     className={cx(
                                       "rounded-xl border px-3 py-2 text-sm transition",
                                       time === s.time
-                                        ? "border-[rgba(127,58,65,0.75)] bg-[rgba(127,58,65,0.25)] text-white"
-                                        : "border-white/10 bg-white/5 text-white/85 hover:bg-white/10",
+                                        ? "border-[#c98d98] bg-[#f8ecee] text-[#7b2f3b]"
+                                        : "border-[#ddd8da] bg-white text-[#374151] hover:bg-[#f7f3f4]",
                                     )}
                                   >
                                     {s.time}
@@ -462,74 +545,55 @@ export default function RestaurantDetailsPage() {
                       )}
                     </div>
 
-                    <div className="mt-2 text-[11px] text-white/45">
+                    <div className="mt-2 text-[11px] text-[#98a2b3]">
                       Times shown are in 30-minute intervals.
                     </div>
                   </div>
 
-                  {/* Contact fields (kept for your current DB) */}
                   <div className="mt-5 grid gap-3">
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-white/55">
+                      <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                         Your name
                       </div>
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Your full name"
-                        className="
-                          mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
-                          bg-black/20 px-4 py-3 text-sm text-white
-                          placeholder:text-white/35 outline-none
-                          focus:border-[var(--maroon-light)]
-                        "
+                        className="mt-2 w-full rounded-2xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] placeholder:text-[#98a2b3] outline-none focus:border-[#b46d73]"
                       />
                     </div>
 
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-white/55">
+                      <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                         Phone
                       </div>
                       <input
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="09xxxxxxxxx"
-                        className="
-                          mt-2 w-full rounded-2xl border border-[var(--maroon-border)]
-                          bg-black/20 px-4 py-3 text-sm text-white
-                          placeholder:text-white/35 outline-none
-                          focus:border-[var(--maroon-light)]
-                        "
+                        className="mt-2 w-full rounded-2xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] placeholder:text-[#98a2b3] outline-none focus:border-[#b46d73]"
                       />
                     </div>
                   </div>
 
-                  {/* Special requests (UI only) */}
                   <div className="mt-5">
-                    <div className="text-xs uppercase tracking-wider text-white/55">
+                    <div className="text-xs uppercase tracking-wider text-[#7b8498]">
                       Special requests
                     </div>
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="e.g., birthday celebration, window seat..."
-                      className="
-                        mt-2 w-full min-h-[92px] resize-none rounded-2xl
-                        border border-white/10 bg-black/20 px-4 py-3
-                        text-sm text-white placeholder:text-white/35 outline-none
-                        focus:border-[var(--maroon-light)]
-                      "
+                      className="mt-2 min-h-[92px] w-full resize-none rounded-2xl border border-[#ddd8da] bg-white px-4 py-3 text-sm text-[#111827] placeholder:text-[#98a2b3] outline-none focus:border-[#b46d73]"
                     />
                   </div>
 
-                  {/* Message */}
                   {msg && (
-                    <div className="mt-4 rounded-2xl border border-[var(--maroon-border)] bg-black/25 px-4 py-3 text-sm text-white/80">
+                    <div className="mt-4 rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
                       {msg}
                     </div>
                   )}
 
-                  {/* CTA */}
                   <button
                     onClick={onReserve}
                     disabled={
@@ -539,18 +603,12 @@ export default function RestaurantDetailsPage() {
                       !name.trim() ||
                       !phone.trim()
                     }
-                    className="
-                      mt-5 w-full rounded-2xl px-6 py-3 text-sm font-medium text-white
-                      border border-[rgba(127,58,65,0.45)]
-                      bg-[linear-gradient(135deg,#7f3a41,#5C252B)]
-                      hover:brightness-110 transition
-                      disabled:opacity-60
-                    "
+                    className="mt-5 w-full rounded-2xl border border-[#d5bcc2] bg-[linear-gradient(135deg,#9b4b56,#7f3a41)] px-6 py-3 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60"
                   >
                     {submitting ? "Reserving..." : "Proceed to Payment"}
                   </button>
 
-                  <div className="mt-2 text-[11px] text-white/45 text-center">
+                  <div className="mt-2 text-center text-[11px] text-[#98a2b3]">
                     Reservation payment is required to secure your slot.
                   </div>
                 </>
@@ -562,12 +620,3 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

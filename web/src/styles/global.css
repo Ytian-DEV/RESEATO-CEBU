@@ -374,3 +374,21 @@ select {
     0 10px 15px -3px rgba(0, 0, 0, 0.45),
     0 4px 6px -2px rgba(0, 0, 0, 0.25);
 }
+
+/* Auth inputs: highlight only the active field border */
+.auth-input:focus,
+.auth-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.auth-field {
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.auth-field:focus-within {
+  border-color: #b46d73;
+  box-shadow: 0 0 0 2px rgba(180, 109, 115, 0.24);
+}

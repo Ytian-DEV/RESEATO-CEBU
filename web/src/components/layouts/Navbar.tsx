@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCheck, LogOut, User } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  LogOut,
+  User,
+  UtensilsCrossed,
+} from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/auth/useSession";
@@ -11,10 +17,10 @@ import {
 } from "../../lib/api/notifications.api";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `relative rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
+  `relative rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
     isActive
-      ? "text-white bg-[rgba(114,47,55,0.25)]"
-      : "text-white/70 hover:text-white hover:bg-[rgba(114,47,55,0.15)]"
+      ? "bg-[#f8ecee] text-[#7b2f3b]"
+      : "text-[#5b6374] hover:bg-[#f7f3f4] hover:text-[#7b2f3b]"
   }`;
 
 type RoleKind = "guest" | "customer" | "vendor" | "admin";
@@ -68,8 +74,8 @@ function getNavItems(roleKind: RoleKind): NavItem[] {
   if (roleKind === "vendor") {
     return [
       { to: "/vendor", label: "Dashboard", end: true },
-      { to: "/vendor/restaurants", label: "Restaurants" },
-      { to: "/vendor/reservations", label: "Reservations" },
+      { to: "/vendor/reservations", label: "Reservation List" },
+      { to: "/vendor/tables", label: "Tables" },
     ];
   }
 
@@ -84,7 +90,6 @@ function getNavItems(roleKind: RoleKind): NavItem[] {
 
   if (roleKind === "customer") {
     return [
-      { to: "/", label: "Home", end: true },
       { to: "/restaurants", label: "Restaurants" },
       { to: "/my-reservations", label: "My Reservations" },
     ];
@@ -115,6 +120,9 @@ export default function Navbar() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [role, setRole] = useState("customer");
+  const [profileFullName, setProfileFullName] = useState("");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
@@ -122,7 +130,6 @@ export default function Navbar() {
   const profileRef = useRef<HTMLDivElement | null>(null);
 
   const email = session?.user?.email ?? "";
-  const initial = email.charAt(0).toUpperCase() || "U";
   const fullName = useMemo(
     () =>
       deriveFullName(
@@ -131,6 +138,14 @@ export default function Navbar() {
       ),
     [email, session?.user?.user_metadata],
   );
+  const metadataAvatarUrl = useMemo(() => {
+    const value = session?.user?.user_metadata?.avatar_url;
+    return typeof value === "string" ? value.trim() : "";
+  }, [session?.user?.user_metadata]);
+  const displayFullName = profileFullName || fullName;
+  const displayAvatarUrl = metadataAvatarUrl || profileAvatarUrl;
+  const initial = (displayFullName || email).charAt(0).toUpperCase() || "U";
+  const shouldShowAvatar = Boolean(displayAvatarUrl) && !avatarLoadError;
 
   const roleKind = useMemo(
     () => getRoleKind(role, Boolean(session)),
@@ -176,35 +191,50 @@ export default function Navbar() {
   useEffect(() => {
     let alive = true;
 
-    async function loadRole() {
+    async function loadProfileContext() {
       if (!session?.user) {
         setRole("customer");
+        setProfileFullName("");
+        setProfileAvatarUrl("");
+        setAvatarLoadError(false);
         return;
       }
 
       const metadataRole = normalizeRole(session.user.user_metadata?.role);
-      if (metadataRole && metadataRole !== "customer") {
-        if (alive) setRole(metadataRole);
-        return;
+      const metadataAvatar =
+        typeof session.user.user_metadata?.avatar_url === "string"
+          ? session.user.user_metadata.avatar_url.trim()
+          : "";
+
+      if (alive) {
+        setRole(metadataRole || "customer");
+        setProfileAvatarUrl(metadataAvatar);
+        setAvatarLoadError(false);
       }
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, full_name, avatar_url")
         .eq("id", session.user.id)
         .maybeSingle();
 
-      if (!alive) return;
+      if (!alive || error || !data) return;
 
-      if (error || !data?.role) {
-        setRole(metadataRole || "customer");
-        return;
+      if (data.role) {
+        setRole(normalizeRole(data.role));
       }
 
-      setRole(normalizeRole(data.role));
+      if (typeof data.full_name === "string" && data.full_name.trim()) {
+        setProfileFullName(data.full_name.trim());
+      }
+
+      if (typeof data.avatar_url === "string") {
+        setProfileAvatarUrl(data.avatar_url.trim());
+        setAvatarLoadError(false);
+      }
     }
 
-    loadRole();
+    loadProfileContext();
 
     return () => {
       alive = false;
@@ -260,6 +290,11 @@ export default function Navbar() {
       return;
     }
 
+    if (roleKind === "customer") {
+      navigate("/restaurants");
+      return;
+    }
+
     navigate("/");
   }
 
@@ -308,18 +343,22 @@ export default function Navbar() {
     <header
       className="
         sticky top-0 z-50
-        border-b border-[rgba(114,47,55,0.25)]
-        bg-[rgba(48,27,27,0.65)]
+        border-b border-[#e8dfe2]
+        bg-[rgba(255,255,255,0.92)]
         backdrop-blur-xl
       "
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div
+        <button
           onClick={handleBrandClick}
-          className="cursor-pointer font-semibold tracking-wide text-white select-none"
+          className="group inline-flex items-center gap-2.5 rounded-xl px-1 text-left"
+          aria-label="Go to dashboard"
         >
-          RESEATO
-        </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#8b3d4a] shadow-sm shadow-[#e8ccd1] transition-all duration-300 group-hover:bg-[#7b2f3b]">
+            <UtensilsCrossed className="h-5 w-5 text-white" />
+          </span>
+          <span className="text-[24px] font-semibold tracking-tight text-[#1f2937]">RESEATO</span>
+        </button>
 
         <nav className="flex items-center gap-2">
           {navItems.map((item) => (
@@ -334,7 +373,7 @@ export default function Navbar() {
             </NavLink>
           ) : (
             <>
-              <span className="hidden rounded-full border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#f1c2c8] md:inline-flex">
+              <span className="hidden rounded-full border border-[#dfc8cd] bg-[#f8ecee] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#7b2f3b] md:inline-flex">
                 {roleLabel}
               </span>
 
@@ -344,7 +383,7 @@ export default function Navbar() {
                     setNotifOpen((prev) => !prev);
                     setProfileOpen(false);
                   }}
-                  className="relative rounded-full border border-white/10 bg-white/5 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                  className="relative rounded-full border border-[#e0d6d8] bg-white p-2 text-[#7b2f3b] transition hover:bg-[#f7f3f4]"
                   aria-label="Notifications"
                 >
                   <Bell className="h-4 w-4" />
@@ -356,14 +395,14 @@ export default function Navbar() {
                 </button>
 
                 {notifOpen && (
-                  <div className="absolute right-0 mt-3 w-96 overflow-hidden rounded-2xl border border-[var(--maroon-border)] bg-[#1a1416] text-white shadow-[0_22px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-                    <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                      <div className="text-xl font-semibold">Notifications</div>
+                  <div className="absolute right-0 mt-3 w-96 overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)]">
+                    <div className="flex items-center justify-between border-b border-[#f0e8ea] px-5 py-4">
+                      <div className="text-lg font-semibold">Notifications</div>
                       {unreadCount > 0 && (
                         <button
                           type="button"
                           onClick={handleMarkAllRead}
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-xs text-white/80 hover:bg-black/30"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#e8dfe2] bg-[#faf7f8] px-2.5 py-1.5 text-xs text-[#5b6374] hover:bg-[#f5eff1]"
                         >
                           <CheckCheck className="h-3.5 w-3.5" />
                           Mark all read
@@ -372,13 +411,13 @@ export default function Navbar() {
                     </div>
 
                     {loadingNotifications ? (
-                      <div className="px-6 py-6 text-sm text-white/60">Loading notifications...</div>
+                      <div className="px-6 py-6 text-sm text-[#6b7280]">Loading notifications...</div>
                     ) : notifications.length === 0 ? (
                       <div className="grid place-items-center gap-3 px-6 py-12 text-center">
-                        <div className="grid h-12 w-12 place-items-center rounded-full border border-[var(--maroon-border)] bg-[rgba(127,58,65,0.12)] text-[#e6b9be]">
+                        <div className="grid h-12 w-12 place-items-center rounded-full border border-[#eadde1] bg-[#f8ecee] text-[#7b2f3b]">
                           <Bell className="h-5 w-5" />
                         </div>
-                        <p className="text-sm text-white/60">No notifications yet</p>
+                        <p className="text-sm text-[#6b7280]">No notifications yet</p>
                       </div>
                     ) : (
                       <div className="max-h-[380px] overflow-y-auto">
@@ -387,17 +426,17 @@ export default function Navbar() {
                             key={item.id}
                             type="button"
                             onClick={() => handleNotificationClick(item)}
-                            className={`w-full border-b border-white/5 px-4 py-3 text-left transition hover:bg-[rgba(127,58,65,0.18)] ${
-                              item.is_read ? "bg-transparent" : "bg-[rgba(127,58,65,0.12)]"
+                            className={`w-full border-b border-[#f4edf0] px-4 py-3 text-left transition hover:bg-[#faf5f7] ${
+                              item.is_read ? "bg-transparent" : "bg-[#fff8fa]"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <p className="text-sm font-semibold text-white">{item.title}</p>
-                              <span className="shrink-0 text-[11px] text-white/45">
+                              <p className="text-sm font-semibold text-[#1f2937]">{item.title}</p>
+                              <span className="shrink-0 text-[11px] text-[#8b97a8]">
                                 {formatNotificationTime(item.created_at)}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-white/65">{item.body}</p>
+                            <p className="mt-1 text-xs text-[#5b6374]">{item.body}</p>
                           </button>
                         ))}
                       </div>
@@ -412,37 +451,47 @@ export default function Navbar() {
                     setProfileOpen((prev) => !prev);
                     setNotifOpen(false);
                   }}
-                  className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(114,47,55,0.35)] bg-[rgba(114,47,55,0.2)] text-sm font-semibold text-white transition hover:bg-[rgba(114,47,55,0.35)]"
+                  className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-[#d8c0c6] bg-[#f8ecee] text-sm font-semibold text-[#7b2f3b] transition hover:bg-[#f4e0e5]"
                   aria-label="Open account menu"
                 >
-                  {initial}
+                  {shouldShowAvatar ? (
+                    <img
+                      src={displayAvatarUrl}
+                      alt="Profile avatar"
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={() => setAvatarLoadError(true)}
+                    />
+                  ) : (
+                    initial
+                  )}
                 </button>
 
                 {profileOpen && (
-                  <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-[var(--maroon-border)] bg-[#1a1416] text-white shadow-[0_22px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-                    <div className="border-b border-white/10 px-4 py-4">
-                      <p className="truncate text-base font-semibold text-white">
-                        {fullName}
+                  <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)]">
+                    <div className="border-b border-[#f0e8ea] px-4 py-4">
+                      <p className="truncate text-base font-semibold text-[#1f2937]">
+                        {displayFullName}
                       </p>
-                      <p className="truncate text-sm text-white/60">{email}</p>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#f1c2c8]">
+                      <p className="truncate text-sm text-[#6b7280]">{email}</p>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#8b3d4a]">
                         {roleLabel}
                       </p>
                     </div>
 
                     <button
                       onClick={openProfilePage}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-base text-white/85 transition hover:bg-[rgba(127,58,65,0.2)]"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#374151] transition hover:bg-[#faf5f7]"
                     >
-                      <User className="h-4 w-4 text-[#e6b9be]" />
+                      <User className="h-4 w-4 text-[#8b3d4a]" />
                       My Profile
                     </button>
 
-                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-[#f0e8ea]" />
 
                     <button
                       onClick={logout}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-base text-[#ff8f9d] transition hover:bg-[rgba(127,58,65,0.2)]"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#b42336] transition hover:bg-[#fff3f5]"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out

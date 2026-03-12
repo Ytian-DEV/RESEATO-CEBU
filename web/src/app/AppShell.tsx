@@ -2,17 +2,32 @@ import Navbar from "../components/layouts/Navbar";
 import { Outlet, useLocation } from "react-router-dom";
 
 export default function AppShell() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
 
-  const isAuthPage = pathname === "/log-in-sign-up";
-  const fullBleed = isAuthPage || pathname === "/" || pathname.startsWith("/restaurants/");
+  const isAuthPage = pathname === "/log-in-sign-up" || pathname === "/forgot-password" || pathname === "/reset-password";
+  const isHomePage = pathname === "/";
+  const hideNavbar = isAuthPage || isHomePage;
+
+  const isCustomerFullBleed =
+    pathname.startsWith("/restaurants") ||
+    pathname === "/my-reservations" ||
+    pathname === "/profile" ||
+    pathname.startsWith("/payment/");
+
+  const isVendorFullBleed = pathname.startsWith("/vendor");
+  const isAdminFullBleed = pathname.startsWith("/admin");
+
+  const fullBleed = hideNavbar || isCustomerFullBleed || isVendorFullBleed || isAdminFullBleed;
+  const appShellClass = isAdminFullBleed ? "min-h-screen bg-[#f3f3f4]" : "min-h-screen";
+  const fullBleedClass = isAdminFullBleed ? "min-h-screen bg-[#f3f3f4]" : undefined;
 
   return (
-    <div className="min-h-screen">
-      {!isAuthPage && <Navbar />}
+    <div className={appShellClass}>
+      {!hideNavbar && <Navbar />}
 
       {fullBleed ? (
-        <main>
+        <main className={fullBleedClass}>
           <Outlet />
         </main>
       ) : (
@@ -23,3 +38,4 @@ export default function AppShell() {
     </div>
   );
 }
+

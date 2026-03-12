@@ -190,6 +190,41 @@ function getMissingColumnName(error: any) {
   return plain ?? null;
 }
 
+function normalizeEmail(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function findAuthUserByEmail(email: string) {
+  const target = normalizeEmail(email);
+  if (!target) return null;
+
+  const perPage = 200;
+  for (let page = 1; page <= 25; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const users = data?.users ?? [];
+    const match = users.find(
+      (user) => normalizeEmail(user.email) === target,
+    );
+
+    if (match) return match;
+    if (users.length < perPage) break;
+  }
+
+  return null;
+}
+
 async function sendEmailNotification(to: string, subject: string, html: string) {
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL || !to) {
     return false;
@@ -356,6 +391,26 @@ function mapRestaurantRow(
     ownerEmail: owner?.email ?? null,
     totalTables: Number(row.total_tables ?? 1),
     createdAt: row.created_at ?? null,
+  };
+}
+
+function mapBestSellerRow(
+  row: any,
+  restaurantName?: string | null,
+) {
+  return {
+    id: row.id,
+    restaurantId: row.restaurant_id,
+    restaurantName: restaurantName ?? null,
+    name: row.name,
+    priceMinor: Number(row.price_minor ?? 0),
+    imageUrl: row.image_url ?? null,
+    stockQuantity: Number(row.stock_quantity ?? 0),
+    soldCount: Number(row.sold_count ?? 0),
+    isActive: row.is_active !== false,
+    createdBy: row.created_by ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
   };
 }
 
@@ -621,10 +676,13 @@ async function getActiveReservationCounts(restaurantId: string, date: string) {
   return counts;
 }
 
-async function insertRestaurantWithFallback(userId: string, payload: Record<string, unknown>) {
+async function insertRestaurantWithFallback(
+  ownerId: string | null,
+  payload: Record<string, unknown>,
+) {
   const currentPayload = {
     ...payload,
-    owner_id: userId,
+    owner_id: ownerId ?? null,
   } as Record<string, unknown>;
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -654,6 +712,40 @@ async function insertRestaurantWithFallback(userId: string, payload: Record<stri
   return supabase
     .from("restaurants")
     .insert(currentPayload)
+    .select("*")
+    .single();
+}
+
+async function updateRestaurantByIdWithFallback(
+  restaurantId: string,
+  payload: Record<string, unknown>,
+) {
+  const currentPayload = { ...payload } as Record<string, unknown>;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const result = await supabase
+      .from("restaurants")
+      .update(currentPayload)
+      .eq("id", restaurantId)
+      .select("*")
+      .single();
+
+    if (!result.error) return result;
+    if (!isUndefinedColumnError(result.error)) return result;
+
+    const missingColumn = getMissingColumnName(result.error);
+    if (missingColumn && missingColumn in currentPayload) {
+      delete currentPayload[missingColumn];
+      continue;
+    }
+
+    return result;
+  }
+
+  return supabase
+    .from("restaurants")
+    .update(currentPayload)
+    .eq("id", restaurantId)
     .select("*")
     .single();
 }
@@ -715,6 +807,73 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.post("/auth/forgot-password", async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ message: "Please enter a valid email address." });
+  }
+
+  try {
+    const existingUser = await findAuthUserByEmail(email);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "Email is not registered. Please check spelling and try again.",
+      });
+    }
+
+    const requestedRedirectTo = String(req.body?.redirectTo ?? "").trim();
+    const fallbackRedirectTo = `${APP_BASE_URL}/reset-password`;
+    let redirectTo = fallbackRedirectTo;
+
+    if (requestedRedirectTo) {
+      try {
+        const requestedUrl = new URL(requestedRedirectTo);
+        const allowedOrigins = new Set<string>();
+
+        for (const origin of WEB_ORIGINS) {
+          try {
+            allowedOrigins.add(new URL(origin).origin);
+          } catch {
+            // ignore malformed origin values
+          }
+        }
+
+        try {
+          allowedOrigins.add(new URL(APP_BASE_URL).origin);
+        } catch {
+          // ignore malformed app base url
+        }
+
+        if (!allowedOrigins.has(requestedUrl.origin)) {
+          return res.status(400).json({ message: "Invalid reset redirect URL." });
+        }
+
+        redirectTo = requestedUrl.toString();
+      } catch {
+        return res.status(400).json({ message: "Invalid reset redirect URL." });
+      }
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Password reset email sent. Please check your inbox.",
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error?.message ?? "Unable to process forgot password request.",
+    });
+  }
+});
+
 app.get("/restaurants", async (_req, res) => {
   const { data, error } = await supabase
     .from("restaurants")
@@ -742,14 +901,50 @@ app.get("/restaurants", async (_req, res) => {
 });
 
 app.get("/restaurants/:id", async (req, res) => {
+  const restaurantId = String(req.params.id ?? "").trim();
+
   const { data, error } = await supabase
     .from("restaurants")
     .select("*")
-    .eq("id", req.params.id)
+    .eq("id", restaurantId)
     .single();
 
   if (error || !data) {
     return res.status(404).json({ message: "Restaurant not found" });
+  }
+
+  let bestSellers: Array<{
+    id: string;
+    name: string;
+    priceMinor: number;
+    imageUrl: string | null;
+    soldCount: number;
+    stockQuantity: number;
+  }> = [];
+
+  const bestSellerResult = await supabase
+    .from("restaurant_best_sellers")
+    .select("id,name,price_minor,image_url,sold_count,stock_quantity,is_active")
+    .eq("restaurant_id", restaurantId)
+    .eq("is_active", true)
+    .order("sold_count", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(9);
+
+  if (!bestSellerResult.error) {
+    bestSellers = (bestSellerResult.data ?? []).map((row: any) => ({
+      id: String(row.id),
+      name: String(row.name ?? ""),
+      priceMinor: Number(row.price_minor ?? 0),
+      imageUrl: row.image_url ? String(row.image_url) : null,
+      soldCount: Number(row.sold_count ?? 0),
+      stockQuantity: Number(row.stock_quantity ?? 0),
+    }));
+  } else if (
+    !isUndefinedTableError(bestSellerResult.error) &&
+    !isUndefinedColumnError(bestSellerResult.error)
+  ) {
+    console.warn("Failed to load public best sellers:", bestSellerResult.error.message);
   }
 
   res.json({
@@ -763,6 +958,7 @@ app.get("/restaurants/:id", async (req, res) => {
     imageUrl: data.image_url,
     contactPhone: data.contact_phone ?? null,
     contactEmail: data.contact_email ?? null,
+    bestSellers,
   });
 });
 
@@ -1948,6 +2144,457 @@ app.post(
   },
 );
 
+app.get("/vendor/charts", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureVendorRole(userId);
+
+    const today = getTodayDateKeyUTC();
+    const to = normalizeDateString(req.query.to) ?? today;
+    const from = normalizeDateString(req.query.from) ?? shiftDateKey(to, -29);
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Invalid date range. Use YYYY-MM-DD." });
+    }
+
+    if (from > to) {
+      return res.status(400).json({ message: "Invalid range: from must be on or before to." });
+    }
+
+    const keys = createDateRangeKeys(from, to);
+    if (!keys.length) {
+      return res
+        .status(400)
+        .json({ message: "Date range must be between 1 and 366 days." });
+    }
+
+    const dayMap = new Map<
+      string,
+      {
+        date: string;
+        total: number;
+        completed: number;
+        cancelled: number;
+        pending: number;
+        confirmed: number;
+        paid: number;
+        revenueMinor: number;
+      }
+    >();
+
+    for (const key of keys) {
+      dayMap.set(key, {
+        date: key,
+        total: 0,
+        completed: 0,
+        cancelled: 0,
+        pending: 0,
+        confirmed: 0,
+        paid: 0,
+        revenueMinor: 0,
+      });
+    }
+
+    const restaurantIds = await getOwnedRestaurantIds(userId);
+
+    if (restaurantIds.length > 0) {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("date,status,payment_status,payment_amount")
+        .in("restaurant_id", restaurantIds)
+        .gte("date", from)
+        .lte("date", to);
+
+      if (error) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      for (const row of data ?? []) {
+        const dateKey = normalizeDateString((row as any).date);
+        if (!dateKey) continue;
+
+        const bucket = dayMap.get(dateKey);
+        if (!bucket) continue;
+
+        bucket.total += 1;
+
+        const status = normalizeReservationStatus((row as any).status);
+        if (status === "completed") bucket.completed += 1;
+        if (status === "cancelled" || status === "declined") bucket.cancelled += 1;
+        if (status === "pending") bucket.pending += 1;
+        if (status === "confirmed") bucket.confirmed += 1;
+
+        const paymentStatus = normalizePaymentStatus((row as any).payment_status);
+        if (paymentStatus === "paid") {
+          bucket.paid += 1;
+
+          const amount = Number((row as any).payment_amount ?? 0);
+          if (Number.isFinite(amount) && amount > 0) {
+            bucket.revenueMinor += amount;
+          }
+        }
+      }
+    }
+
+    const days = keys.map((key) => dayMap.get(key)!);
+
+    const summaryBase = days.reduce(
+      (acc, day) => {
+        acc.totalReservations += day.total;
+        acc.totalCompleted += day.completed;
+        acc.totalCancelled += day.cancelled;
+        acc.totalPending += day.pending;
+        acc.totalConfirmed += day.confirmed;
+        acc.totalPaid += day.paid;
+        acc.totalRevenueMinor += day.revenueMinor;
+        return acc;
+      },
+      {
+        totalReservations: 0,
+        totalCompleted: 0,
+        totalCancelled: 0,
+        totalPending: 0,
+        totalConfirmed: 0,
+        totalPaid: 0,
+        totalRevenueMinor: 0,
+      },
+    );
+
+    const completionRate =
+      summaryBase.totalReservations > 0
+        ? Number(
+            ((summaryBase.totalCompleted / summaryBase.totalReservations) * 100).toFixed(2),
+          )
+        : 0;
+
+    const cancellationRate =
+      summaryBase.totalReservations > 0
+        ? Number(
+            ((summaryBase.totalCancelled / summaryBase.totalReservations) * 100).toFixed(2),
+          )
+        : 0;
+
+    return res.json({
+      from,
+      to,
+      days,
+      summary: {
+        ...summaryBase,
+        completionRate,
+        cancellationRate,
+      },
+    });
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load vendor charts" });
+  }
+});
+
+app.get("/vendor/best-sellers", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureVendorRole(userId);
+
+    const restaurantIds = await getOwnedRestaurantIds(userId);
+    if (restaurantIds.length === 0) return res.json([]);
+
+    const restaurantIdFilter = String(req.query.restaurantId ?? "").trim();
+    const activeFilter = String(req.query.active ?? "all").trim().toLowerCase();
+    const limit = parsePositiveInt(req.query.limit, 120, 1, 500);
+
+    let targetRestaurantIds = restaurantIds;
+    if (restaurantIdFilter) {
+      targetRestaurantIds = restaurantIds.includes(restaurantIdFilter)
+        ? [restaurantIdFilter]
+        : [];
+    }
+
+    if (targetRestaurantIds.length === 0) return res.json([]);
+
+    let query = supabase
+      .from("restaurant_best_sellers")
+      .select(
+        "id,restaurant_id,name,price_minor,image_url,stock_quantity,sold_count,is_active,created_by,created_at,updated_at",
+      )
+      .in("restaurant_id", targetRestaurantIds);
+
+    if (activeFilter === "true" || activeFilter === "false") {
+      query = query.eq("is_active", activeFilter === "true");
+    }
+
+    const { data, error } = await query
+      .order("sold_count", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    if (error && isUndefinedTableError(error)) {
+      return res.status(503).json({
+        message: "Best sellers table is missing. Run the vendor best-sellers SQL migration first.",
+      });
+    }
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    const { data: restaurantsData, error: restaurantsError } = await supabase
+      .from("restaurants")
+      .select("id,name")
+      .in("id", targetRestaurantIds);
+
+    if (restaurantsError) {
+      return res.status(500).json({ message: restaurantsError.message });
+    }
+
+    const restaurantNameById = new Map<string, string>(
+      (restaurantsData ?? []).map((row: any) => [String(row.id), String(row.name ?? "")]),
+    );
+
+    return res.json(
+      (data ?? []).map((row: any) =>
+        mapBestSellerRow(row, restaurantNameById.get(String(row.restaurant_id)) ?? null),
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load best sellers" });
+  }
+});
+
+app.get(
+  "/vendor/restaurants/:restaurantId/best-sellers",
+  requireUser,
+  async (req: any, res) => {
+    const userId = req.user.id;
+    const restaurantId = String(req.params.restaurantId ?? "").trim();
+
+    try {
+      await ensureVendorRole(userId);
+
+      const restaurant = await getRestaurantByIdForVendor(restaurantId, userId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const { data, error } = await supabase
+        .from("restaurant_best_sellers")
+        .select(
+          "id,restaurant_id,name,price_minor,image_url,stock_quantity,sold_count,is_active,created_by,created_at,updated_at",
+        )
+        .eq("restaurant_id", restaurantId)
+        .order("sold_count", { ascending: false })
+        .order("updated_at", { ascending: false });
+
+      if (error && isUndefinedTableError(error)) {
+        return res.status(503).json({
+          message: "Best sellers table is missing. Run the vendor best-sellers SQL migration first.",
+        });
+      }
+
+      if (error) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      return res.json((data ?? []).map((row: any) => mapBestSellerRow(row, restaurant.name)));
+    } catch (error: any) {
+      const status = Number(error?.status ?? 500);
+      return res.status(status).json({ message: error?.message ?? "Failed to load best sellers" });
+    }
+  },
+);
+
+app.post(
+  "/vendor/restaurants/:restaurantId/best-sellers",
+  requireUser,
+  async (req: any, res) => {
+    const userId = req.user.id;
+    const restaurantId = String(req.params.restaurantId ?? "").trim();
+
+    try {
+      await ensureVendorRole(userId);
+
+      const restaurant = await getRestaurantByIdForVendor(restaurantId, userId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const body = req.body ?? {};
+      const name = String(body.name ?? "").trim();
+      const priceMinor = parsePositiveInt(body.priceMinor, 0, 0, 1000000000);
+
+      if (!name) {
+        return res.status(400).json({ message: "Best seller name is required." });
+      }
+
+      if (priceMinor <= 0) {
+        return res.status(400).json({ message: "priceMinor must be greater than 0." });
+      }
+
+      const payload = {
+        restaurant_id: restaurantId,
+        created_by: userId,
+        name,
+        price_minor: priceMinor,
+        image_url: String(body.imageUrl ?? "").trim() || null,
+        stock_quantity: parsePositiveInt(body.stockQuantity, 0, 0, 1000000),
+        sold_count: parsePositiveInt(body.soldCount, 0, 0, 100000000),
+        is_active: body.isActive !== false,
+      };
+
+      const { data, error } = await supabase
+        .from("restaurant_best_sellers")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error && isUndefinedTableError(error)) {
+        return res.status(503).json({
+          message: "Best sellers table is missing. Run the vendor best-sellers SQL migration first.",
+        });
+      }
+
+      if (error) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      return res.status(201).json(mapBestSellerRow(data, restaurant.name));
+    } catch (error: any) {
+      const status = Number(error?.status ?? 500);
+      return res.status(status).json({ message: error?.message ?? "Failed to create best seller" });
+    }
+  },
+);
+
+app.patch(
+  "/vendor/restaurants/:restaurantId/best-sellers/:itemId",
+  requireUser,
+  async (req: any, res) => {
+    const userId = req.user.id;
+    const restaurantId = String(req.params.restaurantId ?? "").trim();
+    const itemId = String(req.params.itemId ?? "").trim();
+
+    try {
+      await ensureVendorRole(userId);
+
+      const restaurant = await getRestaurantByIdForVendor(restaurantId, userId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const body = req.body ?? {};
+      const payload: Record<string, unknown> = {};
+
+      if (body.name !== undefined) {
+        const name = String(body.name ?? "").trim();
+        if (!name) {
+          return res.status(400).json({ message: "Best seller name cannot be empty." });
+        }
+        payload.name = name;
+      }
+
+      if (body.priceMinor !== undefined) {
+        const priceMinor = parsePositiveInt(body.priceMinor, 0, 0, 1000000000);
+        payload.price_minor = priceMinor;
+      }
+
+      if (body.imageUrl !== undefined) {
+        payload.image_url = String(body.imageUrl ?? "").trim() || null;
+      }
+
+      if (body.stockQuantity !== undefined) {
+        payload.stock_quantity = parsePositiveInt(body.stockQuantity, 0, 0, 1000000);
+      }
+
+      if (body.soldCount !== undefined) {
+        payload.sold_count = parsePositiveInt(body.soldCount, 0, 0, 100000000);
+      }
+
+      if (body.isActive !== undefined) {
+        payload.is_active = body.isActive !== false;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+
+      const { data, error } = await supabase
+        .from("restaurant_best_sellers")
+        .update(payload)
+        .eq("id", itemId)
+        .eq("restaurant_id", restaurantId)
+        .select("*")
+        .maybeSingle();
+
+      if (error && isUndefinedTableError(error)) {
+        return res.status(503).json({
+          message: "Best sellers table is missing. Run the vendor best-sellers SQL migration first.",
+        });
+      }
+
+      if (error) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      if (!data) {
+        return res.status(404).json({ message: "Best seller item not found" });
+      }
+
+      return res.json(mapBestSellerRow(data, restaurant.name));
+    } catch (error: any) {
+      const status = Number(error?.status ?? 500);
+      return res.status(status).json({ message: error?.message ?? "Failed to update best seller" });
+    }
+  },
+);
+
+app.delete(
+  "/vendor/restaurants/:restaurantId/best-sellers/:itemId",
+  requireUser,
+  async (req: any, res) => {
+    const userId = req.user.id;
+    const restaurantId = String(req.params.restaurantId ?? "").trim();
+    const itemId = String(req.params.itemId ?? "").trim();
+
+    try {
+      await ensureVendorRole(userId);
+
+      const restaurant = await getRestaurantByIdForVendor(restaurantId, userId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const { data, error } = await supabase
+        .from("restaurant_best_sellers")
+        .delete()
+        .eq("id", itemId)
+        .eq("restaurant_id", restaurantId)
+        .select("id")
+        .maybeSingle();
+
+      if (error && isUndefinedTableError(error)) {
+        return res.status(503).json({
+          message: "Best sellers table is missing. Run the vendor best-sellers SQL migration first.",
+        });
+      }
+
+      if (error) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      if (!data) {
+        return res.status(404).json({ message: "Best seller item not found" });
+      }
+
+      return res.json({ ok: true, id: itemId });
+    } catch (error: any) {
+      const status = Number(error?.status ?? 500);
+      return res.status(status).json({ message: error?.message ?? "Failed to delete best seller" });
+    }
+  },
+);
+
 app.get("/admin/overview", requireUser, async (req: any, res) => {
   const userId = req.user.id;
 
@@ -2353,6 +3000,168 @@ app.get("/admin/restaurants", requireUser, async (req: any, res) => {
   }
 });
 
+
+app.post("/admin/restaurants", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+
+  try {
+    await ensureAdminRole(actorId);
+
+    const body = req.body ?? {};
+    const name = String(body.name ?? "").trim();
+    const cuisine = String(body.cuisine ?? "").trim();
+    const location = String(body.location ?? "").trim();
+
+    if (!name || !cuisine || !location) {
+      return res.status(400).json({ message: "Name, cuisine, and location are required." });
+    }
+
+    const ownerIdRaw = String(body.ownerId ?? "").trim();
+    const ownerId = ownerIdRaw || null;
+
+    if (ownerId) {
+      const ownerRole = await getUserRole(ownerId);
+      const isAssignableVendor =
+        ownerRole === "vendor" || ownerRole === "owner" || ownerRole === "manager";
+
+      if (!isAssignableVendor) {
+        return res.status(400).json({
+          message: "Assigned owner must be a vendor account.",
+        });
+      }
+
+      const ownerLookup = await supabase.auth.admin.getUserById(ownerId);
+      if (ownerLookup.error || !ownerLookup.data?.user) {
+        return res.status(400).json({ message: "Assigned vendor account was not found." });
+      }
+    }
+
+    const payload = {
+      name,
+      cuisine,
+      location,
+      rating: Number.isFinite(Number(body.rating)) ? Number(body.rating) : 0,
+      price_level: parsePositiveInt(body.priceLevel, 1, 1, 4),
+      description: String(body.description ?? "").trim() || null,
+      image_url: String(body.imageUrl ?? "").trim() || null,
+      contact_phone: String(body.contactPhone ?? "").trim() || null,
+      contact_email: String(body.contactEmail ?? "").trim() || null,
+      total_tables: parsePositiveInt(body.totalTables, 10, 1, 999),
+    };
+
+    const { data, error } = await insertRestaurantWithFallback(ownerId, payload);
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    const created = data as any;
+    const ownerMap = await getUserIdentityMap(
+      created?.owner_id ? [String(created.owner_id)] : [],
+    );
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "restaurant_create",
+      targetType: "restaurant",
+      targetId: String(created.id),
+      payload: {
+        name,
+        cuisine,
+        location,
+        ownerId,
+      },
+    });
+
+    return res.status(201).json(
+      mapRestaurantRow(
+        created,
+        created?.owner_id ? ownerMap.get(String(created.owner_id)) ?? null : null,
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to create restaurant" });
+  }
+});
+
+app.patch("/admin/restaurants/:restaurantId/owner", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+  const restaurantId = String(req.params.restaurantId ?? "").trim();
+
+  if (!restaurantId) {
+    return res.status(400).json({ message: "restaurantId is required" });
+  }
+
+  try {
+    await ensureAdminRole(actorId);
+
+    const ownerIdRaw = String(req.body?.ownerId ?? "").trim();
+    const ownerId = ownerIdRaw || null;
+
+    if (ownerId) {
+      const ownerRole = await getUserRole(ownerId);
+      const isAssignableVendor =
+        ownerRole === "vendor" || ownerRole === "owner" || ownerRole === "manager";
+
+      if (!isAssignableVendor) {
+        return res.status(400).json({
+          message: "Assigned owner must be a vendor account.",
+        });
+      }
+
+      const ownerLookup = await supabase.auth.admin.getUserById(ownerId);
+      if (ownerLookup.error || !ownerLookup.data?.user) {
+        return res.status(400).json({ message: "Assigned vendor account was not found." });
+      }
+    }
+
+    const { data, error } = await updateRestaurantByIdWithFallback(restaurantId, {
+      owner_id: ownerId,
+    });
+
+    if (error && isUndefinedColumnError(error)) {
+      return res.status(500).json({
+        message: "Restaurant owner assignment is unavailable (owner_id column missing).",
+      });
+    }
+
+    if (error) {
+      if (String(error?.code ?? "").toUpperCase() === "PGRST116") {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      return res.status(500).json({ message: error.message });
+    }
+
+    const updated = data as any;
+    const ownerMap = await getUserIdentityMap(
+      updated?.owner_id ? [String(updated.owner_id)] : [],
+    );
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "restaurant_owner_assign",
+      targetType: "restaurant",
+      targetId: restaurantId,
+      payload: {
+        ownerId,
+      },
+    });
+
+    return res.json(
+      mapRestaurantRow(
+        updated,
+        updated?.owner_id ? ownerMap.get(String(updated.owner_id)) ?? null : null,
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({
+      message: error?.message ?? "Failed to update restaurant owner",
+    });
+  }
+});
+
 app.get("/admin/reservations", requireUser, async (req: any, res) => {
   const userId = req.user.id;
 
@@ -2584,3 +3393,12 @@ const PORT = Number(process.env.PORT ?? 4000);
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
+
+
+
+
+
+
+
+
+

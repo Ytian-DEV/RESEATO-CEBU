@@ -165,6 +165,37 @@ export function listAdminRestaurants(params?: {
   return adminApi<AdminRestaurant[]>(path);
 }
 
+
+export type AdminRestaurantInput = {
+  name: string;
+  cuisine: string;
+  location: string;
+  rating?: number;
+  priceLevel?: number;
+  description?: string;
+  imageUrl?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  totalTables?: number;
+  ownerId?: string | null;
+};
+
+export function createAdminRestaurant(payload: AdminRestaurantInput) {
+  return adminApi<AdminRestaurant>("/admin/restaurants", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function assignAdminRestaurantOwner(restaurantId: string, ownerId?: string | null) {
+  return adminApi<AdminRestaurant>(`/admin/restaurants/${restaurantId}/owner`, {
+    method: "PATCH",
+    body: {
+      ownerId: ownerId ?? null,
+    },
+  });
+}
+
 export function listAdminReservations(params?: {
   status?: string;
   paymentStatus?: string;
@@ -213,5 +244,8 @@ export function listAdminAuditLogs(params?: { limit?: number }) {
 
   return adminApi<AdminAuditLog[]>(path);
 }
+
+
+
 
 

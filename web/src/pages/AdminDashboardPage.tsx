@@ -20,6 +20,8 @@ import {
   AdminReservation,
   AdminRestaurant,
   AdminUser,
+  assignAdminRestaurantOwner,
+  createAdminRestaurant,
   getAdminCharts,
   getAdminOverview,
   listAdminAuditLogs,
@@ -117,6 +119,18 @@ function csvCell(value: string | number) {
   return text;
   }
 
+function parsePositiveInt(
+  value: unknown,
+  fallback: number,
+  min = 1,
+  max = Number.MAX_SAFE_INTEGER,
+) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < min) return min;
+  if (parsed > max) return max;
+  return parsed;
+}
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const { section } = useParams<{ section?: string }>();
@@ -154,14 +168,33 @@ export default function AdminDashboardPage() {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [updatingReservationId, setUpdatingReservationId] = useState<string | null>(null);
 
+  const [assignableVendors, setAssignableVendors] = useState<AdminUser[]>([]);
+
+  const [restaurantForm, setRestaurantForm] = useState({
+    name: "",
+    cuisine: "",
+    location: "",
+    totalTables: "10",
+    priceLevel: "1",
+    ownerId: "",
+    imageUrl: "",
+    contactPhone: "",
+    contactEmail: "",
+    description: "",
+  });
+
+  const [ownerDraftByRestaurantId, setOwnerDraftByRestaurantId] = useState<Record<string, string>>({});
+  const [creatingRestaurant, setCreatingRestaurant] = useState(false);
+  const [assigningRestaurantId, setAssigningRestaurantId] = useState<string | null>(null);
+
   const panelClass =
-    "rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]";
+    "rounded-3xl border border-[#e5e7eb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]";
   const inputClass =
-    "rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(19,10,11,0.78)] px-3 py-2 text-sm text-[#f7dee1] outline-none placeholder:text-[#d7aeb3]/50 focus:border-[#b76a73] focus:ring-2 focus:ring-[rgba(183,106,115,0.25)]";
+    "rounded-xl border border-[#d8dbe2] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none placeholder:text-[#8b97a8] focus:border-[#b76a73] focus:ring-2 focus:ring-[rgba(183,106,115,0.18)]";
   const selectClass =
-    "maroon-select rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(19,10,11,0.86)] px-3 py-2 text-sm text-[#f7dee1] outline-none focus:border-[#b76a73] focus:ring-2 focus:ring-[rgba(183,106,115,0.25)]";
+    "rounded-xl border border-[#d8dbe2] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b76a73] focus:ring-2 focus:ring-[rgba(183,106,115,0.18)]";
   const ghostButtonClass =
-    "rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-3 py-2 text-sm font-semibold text-[#f4d3d7] hover:bg-[rgba(127,58,65,0.3)]";
+    "rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-sm font-semibold text-[#7b2f3b] hover:bg-[#f3dde1]";
 
   useEffect(() => {
     let alive = true;
@@ -263,6 +296,20 @@ export default function AdminDashboardPage() {
       return next;
     });
   }, [userRoleFilter, userSearch]);
+  const loadAssignableVendors = useCallback(async () => {
+    const data = await listAdminUsers({
+      role: "all",
+      limit: 300,
+      offset: 0,
+    });
+
+    const vendors = data.filter((item) => {
+      const roleValue = normalizeRole(item.role);
+      return roleValue === "vendor" || roleValue === "owner" || roleValue === "manager";
+    });
+
+    setAssignableVendors(vendors);
+  }, []);
 
   const loadRestaurants = useCallback(async () => {
     const data = await listAdminRestaurants({
@@ -272,6 +319,13 @@ export default function AdminDashboardPage() {
     });
 
     setRestaurants(data);
+    setOwnerDraftByRestaurantId((prev) => {
+      const next = { ...prev };
+      for (const item of data) {
+        next[item.id] = item.ownerId ?? "";
+      }
+      return next;
+    });
   }, [restaurantSearch]);
 
   const loadReservations = useCallback(async () => {
@@ -316,6 +370,7 @@ export default function AdminDashboardPage() {
       jobs.push({ label: "users", run: loadUsers });
     } else if (activeTab === "restaurants") {
       jobs.push({ label: "restaurants", run: loadRestaurants });
+      jobs.push({ label: "assignable vendors", run: loadAssignableVendors });
     } else if (activeTab === "reservations") {
       jobs.push({ label: "reservations", run: loadReservations });
     } else if (activeTab === "audit") {
@@ -342,7 +397,7 @@ export default function AdminDashboardPage() {
     }
 
     setLoading(false);
-  }, [activeTab, loadAuditLogs, loadOverview, loadReservations, loadRestaurants, loadUsers]);
+  }, [activeTab, loadAuditLogs, loadAssignableVendors, loadOverview, loadReservations, loadRestaurants, loadUsers]);
   useEffect(() => {
     if (!isAuthed || roleLoading || !isAdmin) {
       setLoading(false);
@@ -460,6 +515,89 @@ export default function AdminDashboardPage() {
     }
   }
 
+
+  async function handleCreateRestaurant() {
+    const name = restaurantForm.name.trim();
+    const cuisine = restaurantForm.cuisine.trim();
+    const location = restaurantForm.location.trim();
+
+    if (!name || !cuisine || !location) {
+      setMessage("Restaurant name, cuisine, and location are required.");
+      return;
+    }
+
+    try {
+      setCreatingRestaurant(true);
+      setMessage(null);
+
+      const created = await createAdminRestaurant({
+        name,
+        cuisine,
+        location,
+        totalTables: parsePositiveInt(restaurantForm.totalTables, 10, 1, 999),
+        priceLevel: parsePositiveInt(restaurantForm.priceLevel, 1, 1, 4),
+        ownerId: restaurantForm.ownerId.trim() || null,
+        imageUrl: restaurantForm.imageUrl.trim() || undefined,
+        contactPhone: restaurantForm.contactPhone.trim() || undefined,
+        contactEmail: restaurantForm.contactEmail.trim() || undefined,
+        description: restaurantForm.description.trim() || undefined,
+      });
+
+      setRestaurants((prev) => [created, ...prev]);
+      setOwnerDraftByRestaurantId((prev) => ({
+        ...prev,
+        [created.id]: created.ownerId ?? "",
+      }));
+
+      await loadOverview();
+
+      setRestaurantForm({
+        name: "",
+        cuisine: "",
+        location: "",
+        totalTables: "10",
+        priceLevel: "1",
+        ownerId: "",
+        imageUrl: "",
+        contactPhone: "",
+        contactEmail: "",
+        description: "",
+      });
+
+      setMessage("Restaurant added successfully.");
+    } catch (error: any) {
+      setMessage(error?.payload?.message ?? error?.message ?? "Failed to create restaurant.");
+    } finally {
+      setCreatingRestaurant(false);
+    }
+  }
+
+  async function handleAssignRestaurantOwner(restaurantId: string) {
+    const ownerId = String(ownerDraftByRestaurantId[restaurantId] ?? "").trim() || null;
+
+    try {
+      setAssigningRestaurantId(restaurantId);
+      setMessage(null);
+
+      const updated = await assignAdminRestaurantOwner(restaurantId, ownerId);
+
+      setRestaurants((prev) =>
+        prev.map((item) => (item.id === restaurantId ? updated : item)),
+      );
+
+      setOwnerDraftByRestaurantId((prev) => ({
+        ...prev,
+        [restaurantId]: updated.ownerId ?? "",
+      }));
+
+      setMessage(ownerId ? "Restaurant assigned to vendor." : "Restaurant assignment cleared.");
+    } catch (error: any) {
+      setMessage(error?.payload?.message ?? error?.message ?? "Failed to assign restaurant owner.");
+    } finally {
+      setAssigningRestaurantId(null);
+    }
+  }
+
   async function handleUpdateReservationStatus(reservationId: string) {
     const nextStatus = String(statusDraftByReservationId[reservationId] ?? "").toLowerCase();
     if (!["pending", "confirmed", "declined", "cancelled", "completed"].includes(nextStatus)) {
@@ -495,7 +633,7 @@ export default function AdminDashboardPage() {
 
   if (authLoading || roleLoading) {
     return (
-      <div className="inline-flex items-center gap-2 text-white/70">
+      <div className="inline-flex items-center gap-2 text-[#667085]">
         <Loader2 className="h-4 w-4 animate-spin" />
         Checking admin access...
       </div>
@@ -504,7 +642,7 @@ export default function AdminDashboardPage() {
 
   if (!isAuthed) {
     return (
-      <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/85">
+      <div className="rounded-3xl border border-[#e5e7eb] bg-white p-6 text-[#475467]">
         Login is required to access admin dashboard.
       </div>
     );
@@ -512,25 +650,25 @@ export default function AdminDashboardPage() {
 
   if (!isAdmin) {
     return (
-      <div className="rounded-3xl border border-[#b44a53]/40 bg-[#4a1e23]/30 p-6 text-[#f6c8cd]">
+      <div className="rounded-3xl border border-[#f3c3cc] bg-[#fff1f3] p-6 text-[#9f1239]">
         You do not have admin access.
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl px-6 py-8 text-[#1f2937]">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-5xl text-white">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-white/65">Platform overview and management</p>
+          <h1 className="text-5xl text-[#1f2937]">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-[#667085]">Platform overview and management</p>
         </div>
 
         <button
           type="button"
           onClick={handleRefresh}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[rgba(127,58,65,0.3)] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-4 py-2.5 text-sm font-semibold text-[#7b2f3b] hover:bg-[#f3dde1] disabled:opacity-60"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
           Refresh
@@ -538,13 +676,13 @@ export default function AdminDashboardPage() {
       </header>
 
       {message && (
-        <div className="mt-5 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
+        <div className="mt-5 rounded-2xl border border-[#f3c3cc] bg-[#fff1f3] px-4 py-3 text-sm text-[#9f1239]">
           {message}
         </div>
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="rounded-xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.03)] p-1">
+        <div className="rounded-xl border border-[#e5e7eb] bg-white p-1">
           {([
             ["overview", "Overview"],
             ["reservations", "Reservations"],
@@ -558,8 +696,8 @@ export default function AdminDashboardPage() {
               onClick={() => navigate(tabToPath(key))}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 activeTab === key
-                  ? "bg-[rgba(127,58,65,0.26)] text-white"
-                  : "text-white/70 hover:bg-[rgba(127,58,65,0.16)] hover:text-white"
+                  ? "bg-[#f8ecee] text-[#7b2f3b]"
+                  : "text-[#667085] hover:bg-[#f3f4f6] hover:text-[#1f2937]"
               }`}
             >
               {label}
@@ -581,12 +719,12 @@ export default function AdminDashboardPage() {
               return (
                 <article key={card.label} className={panelClass}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/65">{card.label}</span>
-                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[rgba(127,58,65,0.2)] text-[#e8c1c7]">
+                    <span className="text-sm text-[#667085]">{card.label}</span>
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[#f8ecee] text-[#8b3d4a]">
                       <Icon className="h-4 w-4" />
                     </span>
                   </div>
-                  <div className="mt-3 text-3xl font-semibold text-white">{card.value}</div>
+                  <div className="mt-3 text-3xl font-semibold text-[#1f2937]">{card.value}</div>
                 </article>
               );
             })}
@@ -601,12 +739,12 @@ export default function AdminDashboardPage() {
             ].map((card) => {
               const Icon = card.icon;
               return (
-                <article key={card.label} className="rounded-2xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.03)] p-4">
+                <article key={card.label} className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs uppercase tracking-wide text-white/55">{card.label}</span>
-                    <Icon className="h-4 w-4 text-[#d6aab0]" />
+                    <span className="text-xs uppercase tracking-wide text-[#8b97a8]">{card.label}</span>
+                    <Icon className="h-4 w-4 text-[#b76a73]" />
                   </div>
-                  <div className="mt-2 text-xl font-semibold text-white">{card.value}</div>
+                  <div className="mt-2 text-xl font-semibold text-[#1f2937]">{card.value}</div>
                 </article>
               );
             })}
@@ -615,7 +753,7 @@ export default function AdminDashboardPage() {
           <article className={panelClass}>
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-white/55">Range preset</p>
+                <p className="text-xs uppercase tracking-wide text-[#8b97a8]">Range preset</p>
                 <select
                   value={chartPreset}
                   onChange={(event) => setChartPreset(event.target.value as ChartPreset)}
@@ -630,7 +768,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-wide text-white/55">From</p>
+                <p className="text-xs uppercase tracking-wide text-[#8b97a8]">From</p>
                 <input
                   type="date"
                   value={chartFrom}
@@ -643,7 +781,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-wide text-white/55">To</p>
+                <p className="text-xs uppercase tracking-wide text-[#8b97a8]">To</p>
                 <input
                   type="date"
                   value={chartTo}
@@ -655,7 +793,7 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              <div className="pb-1 text-xs text-white/55">
+              <div className="pb-1 text-xs text-[#8b97a8]">
                 Charts update instantly when range changes.
               </div>
 
@@ -670,22 +808,22 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80">
-                Range: <span className="font-semibold text-white">{chartData?.from ?? chartFrom}</span> to <span className="font-semibold text-white">{chartData?.to ?? chartTo}</span>
+              <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-sm text-[#5b6374]">
+                Range: <span className="font-semibold text-[#1f2937]">{chartData?.from ?? chartFrom}</span> to <span className="font-semibold text-[#1f2937]">{chartData?.to ?? chartTo}</span>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80">
-                Completion Rate: <span className="font-semibold text-white">{(chartData?.summary.completionRate ?? 0).toFixed(2)}%</span>
+              <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-sm text-[#5b6374]">
+                Completion Rate: <span className="font-semibold text-[#1f2937]">{(chartData?.summary.completionRate ?? 0).toFixed(2)}%</span>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80">
-                Cancellation Rate: <span className="font-semibold text-white">{(chartData?.summary.cancellationRate ?? 0).toFixed(2)}%</span>
+              <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-sm text-[#5b6374]">
+                Cancellation Rate: <span className="font-semibold text-[#1f2937]">{(chartData?.summary.cancellationRate ?? 0).toFixed(2)}%</span>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80">
-                Revenue in range: <span className="font-semibold text-white">{toPeso(chartData?.summary.totalRevenueMinor ?? 0)}</span>
+              <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-sm text-[#5b6374]">
+                Revenue in range: <span className="font-semibold text-[#1f2937]">{toPeso(chartData?.summary.totalRevenueMinor ?? 0)}</span>
               </div>
             </div>
 
             {chartError && (
-              <div className="mt-4 rounded-xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-3 py-2 text-sm text-[#f6c8cd]">
+              <div className="mt-4 rounded-xl border border-[#f3c3cc] bg-[#fff1f3] px-3 py-2 text-sm text-[#9f1239]">
                 {chartError}
               </div>
             )}
@@ -694,10 +832,10 @@ export default function AdminDashboardPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <article className={panelClass}>
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-2xl text-white">Reservations by Day</h3>
-                {chartLoading && <Loader2 className="h-4 w-4 animate-spin text-white/70" />}
+                <h3 className="text-2xl text-[#1f2937]">Reservations by Day</h3>
+                {chartLoading && <Loader2 className="h-4 w-4 animate-spin text-[#667085]" />}
               </div>
-              <p className="text-xs text-white/55">Line chart of total reservations per selected date.</p>
+              <p className="text-xs text-[#8b97a8]">Line chart of total reservations per selected date.</p>
               <div className="mt-3">
                 <ReservationsLineChart points={chartData?.days ?? []} />
               </div>
@@ -705,17 +843,17 @@ export default function AdminDashboardPage() {
 
             <article className={panelClass}>
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-2xl text-white">Completion vs Cancellation</h3>
+                <h3 className="text-2xl text-[#1f2937]">Completion vs Cancellation</h3>
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="inline-flex items-center gap-1 text-[#8ee6b2]">
-                    <span className="h-2 w-2 rounded-full bg-[#61c98f]" /> completed
+                  <span className="inline-flex items-center gap-1 text-[#0f766e]">
+                    <span className="h-2 w-2 rounded-full bg-[#10b981]" /> completed
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[#f0b1b9]">
-                    <span className="h-2 w-2 rounded-full bg-[#e38a95]" /> cancelled/declined
+                  <span className="inline-flex items-center gap-1 text-[#be123c]">
+                    <span className="h-2 w-2 rounded-full bg-[#fb7185]" /> cancelled/declined
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-white/55">Bar chart comparing completed and cancelled reservations by day.</p>
+              <p className="text-xs text-[#8b97a8]">Bar chart comparing completed and cancelled reservations by day.</p>
               <div className="mt-3">
                 <CompletionBarChart points={chartData?.days ?? []} />
               </div>
@@ -727,7 +865,7 @@ export default function AdminDashboardPage() {
 
       {activeTab === "users" && (
         <section className={`mt-5 ${panelClass}`}>
-          <h2 className="text-3xl text-white">User Management</h2>
+          <h2 className="text-3xl text-[#1f2937]">User Management</h2>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <input
@@ -754,9 +892,9 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm text-white/85">
+            <table className="min-w-full text-sm text-[#374151]">
               <thead>
-                <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-white/45">
+                <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
                   <th className="py-2 pr-3">User</th>
                   <th className="py-2 pr-3">Email</th>
                   <th className="py-2 pr-3">Role</th>
@@ -766,14 +904,14 @@ export default function AdminDashboardPage() {
               </thead>
               <tbody>
                 {users.map((item) => (
-                  <tr key={item.id} className="border-b border-white/5">
+                  <tr key={item.id} className="border-b border-[#f1f5f9]">
                     <td className="py-2 pr-3">
                       <span className="inline-flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-emerald-400" />
                         {item.fullName || shortId(item.id)}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 text-white/75">{item.email || "-"}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.email || "-"}</td>
                     <td className="py-2 pr-3">
                       <select
                         value={roleDraftByUserId[item.id] ?? item.role}
@@ -790,13 +928,13 @@ export default function AdminDashboardPage() {
                         <option value="admin">admin</option>
                       </select>
                     </td>
-                    <td className="py-2 pr-3 text-white/65">{toDateTime(item.createdAt)}</td>
+                    <td className="py-2 pr-3 text-[#667085]">{toDateTime(item.createdAt)}</td>
                     <td className="py-2 pr-3">
                       <button
                         type="button"
                         onClick={() => handleUpdateUserRole(item.id)}
                         disabled={updatingUserId === item.id}
-                        className="rounded-lg border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-60"
+                        className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
                       >
                         {updatingUserId === item.id ? "Saving..." : "Update"}
                       </button>
@@ -810,63 +948,246 @@ export default function AdminDashboardPage() {
       )}
 
       {activeTab === "restaurants" && (
-        <section className={`mt-5 ${panelClass}`}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-3xl text-white">Restaurant Management</h2>
-            <div className="text-xs text-white/50">Owner now shows readable name</div>
-          </div>
+        <section className="mt-5 space-y-4">
+          <article className={panelClass}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-3xl text-[#1f2937]">Add Restaurant</h2>
+                <p className="mt-1 text-sm text-[#8b97a8]">Create restaurant details and optionally assign a vendor manager.</p>
+              </div>
+              <div className="rounded-full border border-[#e7d5d8] bg-[#f8ecee] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#7b2f3b]">Admin only</div>
+            </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <input
-              value={restaurantSearch}
-              onChange={(event) => setRestaurantSearch(event.target.value)}
-              placeholder="Search restaurant name/cuisine/location"
-              className={`${inputClass} w-[340px]`}
-            />
-            <button type="button" onClick={loadRestaurants} className={ghostButtonClass}>
-              Apply
-            </button>
-          </div>
+            <div className="mt-6 grid gap-5 rounded-2xl border border-[#eceff4] bg-[#fbfcfe] p-5 md:grid-cols-2 xl:grid-cols-12">
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Name *</span>
+                <input
+                  value={restaurantForm.name}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, name: event.target.value }))
+                  }
+                  placeholder="Restaurant name"
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Cuisine *</span>
+                <input
+                  value={restaurantForm.cuisine}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, cuisine: event.target.value }))
+                  }
+                  placeholder="Cuisine"
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 md:col-span-2 xl:col-span-12">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Location *</span>
+                <input
+                  value={restaurantForm.location}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, location: event.target.value }))
+                  }
+                  placeholder="Address/location"
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 xl:col-span-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Total tables</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={restaurantForm.totalTables}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, totalTables: event.target.value }))
+                  }
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 xl:col-span-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Price level</span>
+                <select
+                  value={restaurantForm.priceLevel}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, priceLevel: event.target.value }))
+                  }
+                  className={`${selectClass} h-11 w-full`}
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+              </label>
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Assign vendor</span>
+                <select
+                  value={restaurantForm.ownerId}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, ownerId: event.target.value }))
+                  }
+                  className={`${selectClass} h-11 w-full`}
+                >
+                  <option value="">Unassigned</option>
+                  {assignableVendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {(vendor.fullName || vendor.email || shortId(vendor.id)) + " (" + vendor.role + ")"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Image URL</span>
+                <input
+                  value={restaurantForm.imageUrl}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, imageUrl: event.target.value }))
+                  }
+                  placeholder="https://..."
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Contact phone</span>
+                <input
+                  value={restaurantForm.contactPhone}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, contactPhone: event.target.value }))
+                  }
+                  placeholder="09xxxxxxxxx"
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 xl:col-span-6">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Contact email</span>
+                <input
+                  value={restaurantForm.contactEmail}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, contactEmail: event.target.value }))
+                  }
+                  placeholder="restaurant@email.com"
+                  className={`${inputClass} h-11 w-full`}
+                />
+              </label>
+              <label className="space-y-1.5 md:col-span-2 xl:col-span-12">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">Description</span>
+                <textarea
+                  value={restaurantForm.description}
+                  onChange={(event) =>
+                    setRestaurantForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  placeholder="Short restaurant description"
+                  rows={3}
+                  className={`${inputClass} min-h-[110px] w-full resize-y py-3`}
+                />
+              </label>
+            </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm text-white/85">
-              <thead>
-                <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-white/45">
-                  <th className="py-2 pr-3">Restaurant</th>
-                  <th className="py-2 pr-3">Owner</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Tables</th>
-                  <th className="py-2 pr-3">Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                {restaurants.map((item) => (
-                  <tr key={item.id} className="border-b border-white/5">
-                    <td className="py-2 pr-3">
-                      <div className="font-semibold text-white">{item.name}</div>
-                      <div className="text-xs text-white/55">{item.cuisine} | {item.location}</div>
-                    </td>
-                    <td className="py-2 pr-3 text-white/75">
-                      {item.ownerName || item.ownerEmail || shortId(item.ownerId || "") || "-"}
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">
-                        Active
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-white/75">{item.totalTables}</td>
-                    <td className="py-2 pr-3 text-white/75">{item.rating.toFixed(1)}</td>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCreateRestaurant}
+                disabled={creatingRestaurant}
+                className="rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-5 py-2.5 text-sm font-semibold text-[#7b2f3b] shadow-sm transition hover:bg-[#f3dde1] disabled:opacity-60"
+              >
+                {creatingRestaurant ? "Creating..." : "Create Restaurant"}
+              </button>
+            </div>
+          </article>
+
+          <article className={panelClass}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-3xl text-[#1f2937]">Restaurant Management</h2>
+              <div className="text-xs text-[#8b97a8]">Assign restaurant owners from vendor accounts</div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <input
+                value={restaurantSearch}
+                onChange={(event) => setRestaurantSearch(event.target.value)}
+                placeholder="Search restaurant name/cuisine/location"
+                className={`${inputClass} w-[340px]`}
+              />
+              <button type="button" onClick={loadRestaurants} className={ghostButtonClass}>
+                Apply
+              </button>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm text-[#374151]">
+                <thead>
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
+                    <th className="py-2 pr-3">Restaurant</th>
+                    <th className="py-2 pr-3">Owner</th>
+                    <th className="py-2 pr-3">Assign Vendor</th>
+                    <th className="py-2 pr-3">Status</th>
+                    <th className="py-2 pr-3">Tables</th>
+                    <th className="py-2 pr-3">Rating</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {restaurants.map((item) => (
+                    <tr key={item.id} className="border-b border-[#f1f5f9]">
+                      <td className="py-2 pr-3">
+                        <div className="font-semibold text-[#1f2937]">{item.name}</div>
+                        <div className="text-xs text-[#8b97a8]">
+                          {item.cuisine} | {item.location}
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3 text-[#475467]">
+                        {item.ownerName || item.ownerEmail || (item.ownerId ? shortId(item.ownerId) : "-")}
+                      </td>
+                      <td className="py-2 pr-3">
+                        <div className="flex min-w-[280px] items-center gap-2">
+                          <select
+                            value={ownerDraftByRestaurantId[item.id] ?? item.ownerId ?? ""}
+                            onChange={(event) =>
+                              setOwnerDraftByRestaurantId((prev) => ({
+                                ...prev,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            className={`${selectClass} min-w-[190px] rounded-lg px-2 py-1 text-xs`}
+                          >
+                            <option value="">Unassigned</option>
+                            {assignableVendors.map((vendor) => (
+                              <option key={vendor.id} value={vendor.id}>
+                                {(vendor.fullName || vendor.email || shortId(vendor.id)) +
+                                  " (" +
+                                  vendor.role +
+                                  ")"}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleAssignRestaurantOwner(item.id)}
+                            disabled={assigningRestaurantId === item.id}
+                            className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                          >
+                            {assigningRestaurantId === item.id ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          Active
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-[#475467]">{item.totalTables}</td>
+                      <td className="py-2 pr-3 text-[#475467]">{item.rating.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
         </section>
       )}
-
       {activeTab === "reservations" && (
         <section className={`mt-5 ${panelClass}`}>
-          <h2 className="text-3xl text-white">All Reservations</h2>
+          <h2 className="text-3xl text-[#1f2937]">All Reservations</h2>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <select
@@ -908,9 +1229,9 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm text-white/85">
+            <table className="min-w-full text-sm text-[#374151]">
               <thead>
-                <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-white/45">
+                <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
                   <th className="py-2 pr-3">ID</th>
                   <th className="py-2 pr-3">User</th>
                   <th className="py-2 pr-3">Restaurant</th>
@@ -924,12 +1245,12 @@ export default function AdminDashboardPage() {
               </thead>
               <tbody>
                 {reservations.map((item) => (
-                  <tr key={item.id} className="border-b border-white/5">
-                    <td className="py-2 pr-3 text-white/70">{shortId(item.id)}</td>
-                    <td className="py-2 pr-3 text-white/75">{item.user_name || item.user_email || shortId(item.user_id)}</td>
-                    <td className="py-2 pr-3 text-white/75">{item.restaurant_name || shortId(item.restaurant_id)}</td>
-                    <td className="py-2 pr-3 text-white/75">{item.date} {item.time}</td>
-                    <td className="py-2 pr-3 text-white/75">{item.guests}</td>
+                  <tr key={item.id} className="border-b border-[#f1f5f9]">
+                    <td className="py-2 pr-3 text-[#667085]">{shortId(item.id)}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.user_name || item.user_email || shortId(item.user_id)}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.restaurant_name || shortId(item.restaurant_id)}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.date} {item.time}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.guests}</td>
                     <td className="py-2 pr-3">
                       <select
                         value={statusDraftByReservationId[item.id] ?? item.status}
@@ -948,14 +1269,14 @@ export default function AdminDashboardPage() {
                         <option value="completed">completed</option>
                       </select>
                     </td>
-                    <td className="py-2 pr-3 text-white/75">{item.payment_status || "unpaid"}</td>
-                    <td className="py-2 pr-3 text-white/75">{toPeso(item.payment_amount ?? 0)}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{item.payment_status || "unpaid"}</td>
+                    <td className="py-2 pr-3 text-[#475467]">{toPeso(item.payment_amount ?? 0)}</td>
                     <td className="py-2 pr-3">
                       <button
                         type="button"
                         onClick={() => handleUpdateReservationStatus(item.id)}
                         disabled={updatingReservationId === item.id}
-                        className="rounded-lg border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-60"
+                        className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
                       >
                         {updatingReservationId === item.id ? "Saving..." : "Update"}
                       </button>
@@ -966,7 +1287,7 @@ export default function AdminDashboardPage() {
             </table>
           </div>
 
-          <p className="mt-3 text-xs italic text-white/45">
+          <p className="mt-3 text-xs italic text-[#8b97a8]">
             Each completed reservation can be used for commission tracking later.
           </p>
         </section>
@@ -974,28 +1295,28 @@ export default function AdminDashboardPage() {
 
       {activeTab === "audit" && (
         <section className={`mt-5 ${panelClass}`}>
-          <h2 className="text-3xl text-white">Admin Audit Logs</h2>
+          <h2 className="text-3xl text-[#1f2937]">Admin Audit Logs</h2>
 
           <div className="mt-4 space-y-3">
             {auditLogs.map((log) => (
               <article
                 key={log.id}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-white">{log.action}</div>
-                  <div className="text-xs text-white/55">{toDateTime(log.created_at)}</div>
+                  <div className="text-sm font-semibold text-[#1f2937]">{log.action}</div>
+                  <div className="text-xs text-[#8b97a8]">{toDateTime(log.created_at)}</div>
                 </div>
-                <p className="mt-1 text-xs text-white/60">
+                <p className="mt-1 text-xs text-[#667085]">
                   Actor: {shortId(log.actor_id)} | Target: {log.target_type} ({shortId(log.target_id)})
                 </p>
-                <pre className="mt-2 overflow-auto rounded-lg bg-black/30 p-2 text-[11px] text-white/65">
+                <pre className="mt-2 overflow-auto rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-2 text-[11px] text-[#475467]">
                   {JSON.stringify(log.payload ?? {}, null, 2)}
                 </pre>
               </article>
             ))}
             {auditLogs.length === 0 && (
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/65">
+              <div className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 text-sm text-[#667085]">
                 No audit logs available.
               </div>
             )}
@@ -1005,4 +1326,17 @@ export default function AdminDashboardPage() {
     </div>
   );
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
 

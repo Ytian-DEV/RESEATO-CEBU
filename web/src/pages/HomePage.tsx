@@ -1,143 +1,134 @@
-import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { UtensilsCrossed } from "lucide-react";
 import { useSession } from "../lib/auth/useSession";
-
-function TermsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-4">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-6 text-neutral-100 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">Terms and Conditions</h3>
-            <p className="mt-1 text-sm text-neutral-300">
-              This is a placeholder Terms modal. Replace with your real terms
-              content.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg px-3 py-1 text-sm text-neutral-300 hover:bg-white/5 hover:text-white"
-          >
-            Close
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-3 text-sm text-neutral-300">
-          <p>
-            By using RESEATO, you agree to provide accurate information and
-            follow restaurant policies.
-          </p>
-          <p>
-            Reservations are subject to confirmation and availability. Please
-            arrive on time.
-          </p>
-          <p>
-            We may update these terms anytime. Continued use means acceptance.
-          </p>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-6 w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
-        >
-          I Understand
-        </button>
-      </div>
-    </div>
-  );
-}
+import { getPostAuthRedirect } from "../lib/auth/roleRedirect";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { session, loading } = useSession();
-  const [termsOpen, setTermsOpen] = useState(false);
 
-  const ctaLabel = useMemo(() => {
-    if (loading) return "Loading…";
-    return session ? "Explore Restaurants" : "Get Started";
-  }, [loading, session]);
+  useEffect(() => {
+    let alive = true;
 
-  function onPrimaryCTA() {
-    if (session) navigate("/restaurants");
-    else navigate("/log-in-sign-up");
+    async function redirectAuthedUser() {
+      if (loading || !session) return;
+
+      const target = await getPostAuthRedirect(session);
+      if (!alive) return;
+
+      if (target !== "/") {
+        navigate(target, { replace: true });
+      }
+    }
+
+    void redirectAuthedUser();
+
+    return () => {
+      alive = false;
+    };
+  }, [loading, navigate, session]);
+
+  async function onSignIn() {
+    if (session) {
+      const target = await getPostAuthRedirect(session);
+      navigate(target, { replace: true });
+      return;
+    }
+
+    navigate("/log-in-sign-up");
+  }
+
+  async function onGetStarted() {
+    if (session) {
+      const target = await getPostAuthRedirect(session);
+      navigate(target, { replace: true });
+      return;
+    }
+    navigate("/log-in-sign-up");
+  }
+
+  if (loading) {
+    return <div className="h-screen bg-black" />;
+  }
+
+  if (session) {
+    return null;
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-neutral-950">
-      {/* Background image */}
+    <div className="relative h-screen overflow-hidden bg-black text-white">
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80"
-          alt=""
-          className="h-full w-full object-cover hero-bg-motion"
+          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2400&q=90"
+          alt="Restaurant interior"
+          className="hero-bg-motion h-full w-full object-cover"
         />
       </div>
 
-      {/* Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/75" />
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(139, 36, 47, 0.35),rgba(92,37,43,0.45))]" />
+      <div className="absolute inset-0 bg-black/58" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(43,16,20,0.58)_0%,rgba(16,11,12,0.44)_48%,rgba(14,10,10,0.74)_100%)]" />
 
-      {/* Content (push down so navbar doesn't overlap) */}
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 text-center pt-20"
-      >
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold text-white tracking-tight drop-shadow-lg max-w-4xl">
-          Restaurants in Cebu City
-        </h1>
+      <div className="relative z-10 flex h-screen flex-col">
+        <header className="mx-auto flex w-full max-w-[1520px] items-center justify-between px-7 pt-5 sm:px-9 lg:px-10">
+          <Link to="/" className="group flex items-center gap-2.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(44,42,47,0.85)] ring-1 ring-white/10 backdrop-blur transition-all duration-300 group-hover:bg-[rgba(70,52,56,0.92)]">
+              <UtensilsCrossed className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-[clamp(1.65rem,1.55vw,2rem)] leading-none font-semibold tracking-tight text-white">
+              RESEATO
+            </span>
+          </Link>
 
-        <p className="mt-4 md:mt-6 text-base sm:text-lg md:text-xl text-white/95 font-light tracking-wide max-w-2xl">
-          Book the best tables at top rated restaurants — skip the line, enjoy
-          the dine, and discover what’s best.
-        </p>
-
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={onPrimaryCTA}
-            disabled={loading}
-            className="rounded-xl bg-white px-6 py-3 text-sm font-medium text-neutral-900 hover:bg-white/95 disabled:opacity-60 transition"
-          >
-            {ctaLabel}
-          </button>
-
-          <button
-            onClick={() => navigate("/restaurants")}
-            className="rounded-xl border border-white/30 bg-white/0 px-6 py-3 text-sm font-medium text-white hover:bg-white/10 transition"
-          >
-            Browse Now
-          </button>
-        </div>
-
-        {!session && (
-          <div className="mt-4 text-sm text-white/80">
-            Already have an account?{" "}
+          <div className="flex items-center gap-2.5">
             <button
-              onClick={() => navigate("/log-in-sign-up")}
-              className="underline hover:text-white"
+              type="button"
+              onClick={onSignIn}
+              className="rounded-xl border border-white/35 bg-[rgba(17,17,20,0.35)] px-[0.88rem] py-[0.38rem] text-[clamp(0.88rem,0.88vw,1.1rem)] font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur hover:bg-[rgba(34,34,40,0.5)] sm:px-[1.08rem] sm:py-[0.48rem]"
             >
-              Sign in here
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={onGetStarted}
+              className="rounded-xl bg-gradient-to-r from-[#b46d73] to-[#923f4a] px-[1rem] py-[0.38rem] text-[clamp(0.88rem,0.88vw,1.1rem)] font-semibold text-white shadow-[0_10px_22px_rgba(116,43,53,0.42)] hover:brightness-105 sm:px-[1.22rem] sm:py-[0.48rem]"
+            >
+              Get Started
             </button>
           </div>
-        )}
-      </motion.div>
+        </header>
 
-      {/* Bottom links */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-6 py-4 text-sm text-white/80">
-        <Link to="/about" className="hover:text-white transition">
-          About
-        </Link>
-        <span className="text-white/40">|</span>
-        <Link to="/terms" className="hover:text-white transition">
-          Terms and Conditions
-        </Link>
+        <section className="mx-auto flex w-full max-w-[1520px] flex-1 items-center justify-center px-6 text-center sm:px-10">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="max-w-[760px]"
+          >
+            <h1 className="text-[clamp(1.95rem,3vw,3rem)] leading-[1.1] font-semibold tracking-tight text-white drop-shadow-[0_8px_16px_rgba(0,0,0,0.38)]">
+              Restaurants in Cebu City
+            </h1>
+
+            <p className="mx-auto mt-3 max-w-[740px] text-[clamp(0.98rem,1.35vw,1.45rem)] leading-[1.32] font-medium text-white/95 drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]">
+              Book the Best Tables at Top Rated Restaurants, Skip the Line,
+              Enjoy the Dine and Suggest What&apos;s Best.
+            </p>
+          </motion.div>
+        </section>
+
+        <footer className="pb-5">
+          <div className="mx-auto flex w-full max-w-[1520px] items-center justify-center gap-4 text-[clamp(0.9rem,0.9vw,1.08rem)] text-white/90">
+            <Link to="/about" className="hover:text-white">
+              About
+            </Link>
+            <span className="text-white/50">|</span>
+            <Link to="/terms" className="hover:text-white">
+              Terms and Conditions
+            </Link>
+          </div>
+        </footer>
       </div>
-
-      <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
 }

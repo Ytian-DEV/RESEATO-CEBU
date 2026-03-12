@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType, Session } from "@supabase/supabase-js";
 import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle2, Circle, UtensilsCrossed, Check, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { getPostAuthRedirect } from "../lib/auth/roleRedirect";
 import { supabase } from "../lib/supabase";
 
 type Mode = "login" | "signup";
@@ -98,8 +99,20 @@ export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const redirectTo = (location.state as any)?.from ?? "/restaurants";
+  const requestedPath = (location.state as { from?: string } | null)?.from ?? null;
   const authRedirectUrl = `${window.location.origin}/log-in-sign-up`;
+
+  const resolveRedirect = useCallback(
+    async (sessionOverride: Session | null = null) => {
+      if (sessionOverride) {
+        return getPostAuthRedirect(sessionOverride, requestedPath);
+      }
+
+      const { data } = await supabase.auth.getSession();
+      return getPostAuthRedirect(data.session, requestedPath);
+    },
+    [requestedPath],
+  );
 
   const [mode, setMode] = useState<Mode>("login");
   const [role, setRole] = useState<Role>("customer");
@@ -148,7 +161,8 @@ export default function AuthPage() {
         }
 
         if (data.session) {
-          navigate(redirectTo, { replace: true });
+          const target = await resolveRedirect(data.session);
+          navigate(target, { replace: true });
           return;
         }
       }
@@ -167,7 +181,8 @@ export default function AuthPage() {
         }
 
         if (data.session) {
-          navigate(redirectTo, { replace: true });
+          const target = await resolveRedirect(data.session);
+          navigate(target, { replace: true });
           return;
         }
 
@@ -175,7 +190,8 @@ export default function AuthPage() {
         if (cancelled) return;
 
         if (sessionData.session) {
-          navigate(redirectTo, { replace: true });
+          const target = await resolveRedirect(sessionData.session);
+          navigate(target, { replace: true });
           return;
         }
 
@@ -189,7 +205,8 @@ export default function AuthPage() {
         if (cancelled) return;
 
         if (sessionData.session) {
-          navigate(redirectTo, { replace: true });
+          const target = await resolveRedirect(sessionData.session);
+          navigate(target, { replace: true });
         }
       }
     }
@@ -199,7 +216,7 @@ export default function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [location.hash, location.search, navigate, redirectTo]);
+  }, [location.hash, location.search, navigate, resolveRedirect]);
 
   const passwordChecks = useMemo(
     () => evaluatePassword(password, confirmPassword),
@@ -343,7 +360,7 @@ export default function AuthPage() {
 
     try {
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
@@ -352,7 +369,8 @@ export default function AuthPage() {
 
         setMsg("Logged in!");
         setShowResendConfirmation(false);
-        navigate(redirectTo, { replace: true });
+        const target = await resolveRedirect(data.session);
+        navigate(target, { replace: true });
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
@@ -374,7 +392,8 @@ export default function AuthPage() {
         if (data.session) {
           setMsg("Account created. You are now logged in.");
           setShowResendConfirmation(false);
-          navigate(redirectTo, { replace: true });
+          const target = await resolveRedirect(data.session);
+          navigate(target, { replace: true });
           return;
         }
 
@@ -678,6 +697,18 @@ export default function AuthPage() {
                 toggleShow={() => setShowPassword((s) => !s)}
               />
 
+              {mode === "login" && (
+                <div className="-mt-2 flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    state={{ email: email.trim() }}
+                    className="text-xs font-semibold text-[#7b2f3b] hover:text-[#923f4a]"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
               {mode === "signup" && (
                 <>
                   <PasswordField
@@ -806,14 +837,14 @@ function Field(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-[#4b5563]">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
+      <div className="auth-field flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
         <span className="text-[#9ca3af]">{props.icon}</span>
         <input
           type={props.type ?? "text"}
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
           placeholder={props.placeholder}
-          className="w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#9ca3af]"
+          className="auth-input w-full bg-transparent text-sm text-[#111827] placeholder:text-[#9ca3af]"
         />
       </div>
     </label>
@@ -831,13 +862,13 @@ function PasswordField(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-[#4b5563]">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
+      <div className="auth-field flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
         <span className="text-[#9ca3af]">{props.icon}</span>
         <input
           type={props.show ? "text" : "password"}
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
-          className="w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#9ca3af]"
+          className="auth-input w-full bg-transparent text-sm text-[#111827] placeholder:text-[#9ca3af]"
           placeholder="********"
         />
         <button
@@ -851,17 +882,3 @@ function PasswordField(props: {
     </label>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

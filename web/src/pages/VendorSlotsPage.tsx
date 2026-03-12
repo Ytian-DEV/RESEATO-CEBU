@@ -16,6 +16,7 @@ import {
 } from "../lib/api/vendor.api";
 import { ApiError } from "../lib/api/client";
 import { useAuth } from "../lib/auth/useAuth";
+import VendorPageReveal from "../components/vendor/VendorPageReveal";
 
 const DAY_OPTIONS = [
   { value: 0, label: "Sunday" },
@@ -204,10 +205,10 @@ function TimeInput12h({ value, onChange, idPrefix }: TimeInputProps) {
         }}
         placeholder="HH"
         maxLength={2}
-        className="w-[56px] rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white"
+        className="w-[56px] rounded-lg border border-[#d9dce3] bg-white px-2 py-1.5 text-sm text-[#1f2937]"
       />
 
-      <span className="text-white/50">:</span>
+      <span className="text-[#8b97a8]">:</span>
 
       <input
         id={`${idPrefix}-minute`}
@@ -223,7 +224,7 @@ function TimeInput12h({ value, onChange, idPrefix }: TimeInputProps) {
         }}
         placeholder="MM"
         maxLength={2}
-        className="w-[56px] rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white"
+        className="w-[56px] rounded-lg border border-[#d9dce3] bg-white px-2 py-1.5 text-sm text-[#1f2937]"
       />
 
       <select
@@ -231,7 +232,7 @@ function TimeInput12h({ value, onChange, idPrefix }: TimeInputProps) {
         ref={periodRef}
         value={parts.period}
         onChange={handlePeriodChange}
-        className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white outline-none"
+        className="rounded-lg border border-[#d9dce3] bg-white px-2 py-1.5 text-sm text-[#1f2937] outline-none"
       >
         <option value="AM">AM</option>
         <option value="PM">PM</option>
@@ -311,6 +312,9 @@ export default function VendorSlotsPage() {
     [dayOfWeek],
   );
 
+  const isSuccessMessage =
+    typeof message === "string" && message.toLowerCase().includes("saved");
+
   function updateSlot(index: number, patch: Partial<VendorSlotConfig>) {
     setSlots((prev) => {
       const next = [...prev];
@@ -376,205 +380,220 @@ export default function VendorSlotsPage() {
 
   if (authLoading) {
     return (
-      <div className="inline-flex items-center gap-2 text-white/70">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Checking session...
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="inline-flex items-center gap-2 text-[#5b6374]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Checking session...
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!isAuthed) {
     return (
-      <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/85">
-        Login is required to manage restaurant slots.
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
+            Login is required to manage restaurant slots.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5a6ab]">
-          Vendor Portal
-        </p>
-        <h1 className="mt-2 text-5xl text-white">Slot Configuration</h1>
-        <p className="mt-1 text-sm text-white/65">
-          Configure table capacity per time slot and day.
-        </p>
-      </header>
-      <div className="mt-4">
-        <Link
-          to="/vendor/restaurants"
-          className="inline-flex rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/85 hover:bg-black/30"
-        >
-          Back to Restaurants
-        </Link>
-      </div>
+    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b3d4a]">
+            Vendor Portal
+          </p>
+          <h1 className="mt-2 text-5xl text-[#1f2937]">Tables & Slot Configuration</h1>
+          <p className="mt-1 text-sm text-[#5b6374]">
+            Configure table capacity per time slot and day.
+          </p>
+        </header>
 
-      {message && (
-        <div className="mt-5 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
-          {message}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="mt-6 rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/75">
-          <div className="inline-flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading slot settings...
-          </div>
-        </div>
-      ) : (
-        <section className="mt-6 rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-3xl text-white">
-                {restaurant?.name ?? "Restaurant"}
-              </h2>
-              <p className="text-sm text-white/60">
-                Default table capacity: {defaultMaxTables}
-              </p>
-            </div>
-
-            <label className="text-sm text-white/80">
-              Day of Week
-              <select
-                value={dayOfWeek}
-                onChange={(event) => setDayOfWeek(Number(event.target.value))}
-                className="ml-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
-              >
-                {DAY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                {selectedDayLabel} Slots
-              </h3>
-              <span className="text-xs uppercase tracking-wide text-white/45">
-                {slots.length} slots
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {slots.map((slot, index) => (
-                <div
-                  key={`${slot.time}-${index}`}
-                  className="grid gap-2 rounded-xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[220px_150px_120px_auto] sm:items-center"
-                >
-                  <label className="text-xs text-white/65">
-                    Time
-                    <TimeInput12h
-                      value={slot.time}
-                      onChange={(nextTime) => updateSlot(index, { time: nextTime })}
-                      idPrefix={`slot-${index}`}
-                    />
-                  </label>
-
-                  <label className="text-xs text-white/65">
-                    Max Tables
-                    <input
-                      type="number"
-                      min={1}
-                      max={999}
-                      value={slot.maxTables}
-                      onChange={(event) =>
-                        updateSlot(index, {
-                          maxTables: Math.max(1, Number(event.target.value) || 1),
-                        })
-                      }
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white"
-                    />
-                  </label>
-
-                  <label className="inline-flex items-center gap-2 self-end pb-1 text-sm text-white/80">
-                    <input
-                      type="checkbox"
-                      checked={slot.isActive}
-                      onChange={(event) =>
-                        updateSlot(index, { isActive: event.target.checked })
-                      }
-                      className="custom-checkbox"
-                    />
-                    Active
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => removeSlot(index)}
-                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-[#8b3e46]/70 bg-[rgba(127,58,65,0.2)] px-2 py-1.5 text-xs text-[#f0b7be] hover:bg-[rgba(127,58,65,0.3)]"
-                  >
-                    <MinusCircle className="h-3.5 w-3.5" />
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 grid gap-2 rounded-xl border border-dashed border-white/15 bg-black/15 p-3 sm:grid-cols-[220px_150px_auto] sm:items-end">
-              <label className="text-xs text-white/65">
-                New Time
-                <TimeInput12h
-                  value={newSlotTime}
-                  onChange={setNewSlotTime}
-                  idPrefix="new-slot"
-                />
-              </label>
-
-              <label className="text-xs text-white/65">
-                Max Tables
-                <input
-                  type="number"
-                  min={1}
-                  max={999}
-                  value={newSlotTables}
-                  onChange={(event) => setNewSlotTables(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={addSlot}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-white/85 hover:bg-black/35"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Add Slot
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[rgba(127,58,65,0.3)] disabled:opacity-60"
+        <div className="mt-4">
+          <Link
+            to="/vendor/tables"
+            className="inline-flex rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#374151] hover:bg-[#f8fafc]"
           >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save Slot Configuration
-              </>
-            )}
-          </button>
+            Back to Tables
+          </Link>
+        </div>
 
-          <div className="mt-2 inline-flex items-center gap-2 text-xs text-white/50">
-            <Settings className="h-3.5 w-3.5" />
-            Inactive slots stay in config but are hidden from customer booking.
+        {message && (
+          <div
+            className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
+              isSuccessMessage
+                ? "border-[#b7e4c7] bg-[#ecfdf3] text-[#166534]"
+                : "border-[#f2cccf] bg-[#fff6f7] text-[#9f1239]"
+            }`}
+          >
+            {message}
           </div>
-        </section>
-      )}
+        )}
+
+        {loading ? (
+          <div className="mt-6 rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#5b6374] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <div className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading slot settings...
+            </div>
+          </div>
+        ) : (
+          <VendorPageReveal>
+          <section className="mt-6 rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-3xl text-[#1f2937]">{restaurant?.name ?? "Restaurant"}</h2>
+                <p className="text-sm text-[#6b7280]">
+                  Default table capacity: {defaultMaxTables}
+                </p>
+              </div>
+
+              <label className="text-sm text-[#4b5563]">
+                Day of Week
+                <select
+                  value={dayOfWeek}
+                  onChange={(event) => setDayOfWeek(Number(event.target.value))}
+                  className="ml-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none"
+                >
+                  {DAY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[#1f2937]">{selectedDayLabel} Slots</h3>
+                <span className="text-xs uppercase tracking-wide text-[#8b97a8]">
+                  {slots.length} slots
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {slots.map((slot, index) => (
+                  <div
+                    key={`${slot.time}-${index}`}
+                    className="grid gap-2 rounded-xl border border-[#e5e7eb] bg-white p-3 sm:grid-cols-[220px_150px_120px_auto] sm:items-center"
+                  >
+                    <label className="text-xs text-[#6b7280]">
+                      Time
+                      <TimeInput12h
+                        value={slot.time}
+                        onChange={(nextTime) => updateSlot(index, { time: nextTime })}
+                        idPrefix={`slot-${index}`}
+                      />
+                    </label>
+
+                    <label className="text-xs text-[#6b7280]">
+                      Max Tables
+                      <input
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={slot.maxTables}
+                        onChange={(event) =>
+                          updateSlot(index, {
+                            maxTables: Math.max(1, Number(event.target.value) || 1),
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-[#d9dce3] bg-white px-2 py-1.5 text-sm text-[#1f2937]"
+                      />
+                    </label>
+
+                    <label className="inline-flex items-center gap-2 self-end pb-1 text-sm text-[#4b5563]">
+                      <input
+                        type="checkbox"
+                        checked={slot.isActive}
+                        onChange={(event) =>
+                          updateSlot(index, { isActive: event.target.checked })
+                        }
+                        className="h-4 w-4 rounded border-[#c8ccd6] accent-[#8b3d4a]"
+                      />
+                      Active
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => removeSlot(index)}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-[#f2cccf] bg-[#fff6f7] px-2 py-1.5 text-xs text-[#9f1239] hover:bg-[#ffeef1]"
+                    >
+                      <MinusCircle className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-2 rounded-xl border border-dashed border-[#d2d8e3] bg-[#f8fafc] p-3 sm:grid-cols-[220px_150px_auto] sm:items-end">
+                <label className="text-xs text-[#6b7280]">
+                  New Time
+                  <TimeInput12h
+                    value={newSlotTime}
+                    onChange={setNewSlotTime}
+                    idPrefix="new-slot"
+                  />
+                </label>
+
+                <label className="text-xs text-[#6b7280]">
+                  Max Tables
+                  <input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={newSlotTables}
+                    onChange={(event) => setNewSlotTables(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d9dce3] bg-white px-2 py-1.5 text-sm text-[#1f2937]"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={addSlot}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-sm font-medium text-[#7b2f3b] hover:bg-[#f3dde1]"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Add Slot
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-4 py-2.5 text-sm font-semibold text-[#7b2f3b] hover:bg-[#f3dde1] disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Tables & Slot Configuration
+                </>
+              )}
+            </button>
+
+            <div className="mt-2 inline-flex items-center gap-2 text-xs text-[#6b7280]">
+              <Settings className="h-3.5 w-3.5" />
+              Inactive slots stay in config but are hidden from customer booking.
+            </div>
+          </section>
+          </VendorPageReveal>
+        )}
+      </div>
     </div>
   );
 }
