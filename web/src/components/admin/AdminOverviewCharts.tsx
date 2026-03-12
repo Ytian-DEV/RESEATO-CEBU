@@ -70,7 +70,7 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
   }, [points]);
 
   if (!line) {
-    return <div className="grid h-[280px] place-items-center text-sm text-white/45">No chart data.</div>;
+    return <div className="grid h-[280px] place-items-center text-sm text-[#8b97a8]">No chart data.</div>;
   }
 
   return (
@@ -85,10 +85,10 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
                 x2={width - padX}
                 y1={y}
                 y2={y}
-                stroke="rgba(255,255,255,0.12)"
+                stroke="rgba(148,163,184,0.32)"
                 strokeDasharray="3 4"
               />
-              <text x={10} y={y + 4} fontSize="11" fill="rgba(255,255,255,0.55)">
+              <text x={10} y={y + 4} fontSize="11" fill="rgba(100,116,139,0.8)">
                 {tick}
               </text>
             </g>
@@ -97,7 +97,7 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
 
         <motion.path
           d={line.area}
-          fill="rgba(183,106,115,0.14)"
+          fill="rgba(183,106,115,0.16)"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4 }}
@@ -106,7 +106,7 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
         <motion.path
           d={line.path}
           fill="none"
-          stroke="#d9a3aa"
+          stroke="#8b3d4a"
           strokeWidth="3"
           strokeLinecap="round"
           initial={{ pathLength: 0 }}
@@ -120,7 +120,7 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
             cx={coord.x}
             cy={coord.y}
             r="4"
-            fill="#f6d4d8"
+            fill="#fdf2f4"
             stroke="#7f3a41"
             strokeWidth="1.2"
             initial={{ scale: 0, opacity: 0 }}
@@ -144,7 +144,7 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
               y={height - 8}
               textAnchor="middle"
               fontSize="10"
-              fill="rgba(255,255,255,0.52)"
+              fill="rgba(100,116,139,0.78)"
             >
               {formatDayLabel(coord.point.date)}
             </text>
@@ -154,13 +154,13 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
 
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-20 min-w-[190px] -translate-x-1/2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(19,10,11,0.95)] px-3 py-2 text-xs text-[#f7dee1] shadow-2xl"
+          className="pointer-events-none absolute z-20 min-w-[190px] -translate-x-1/2 rounded-xl border border-[#d9c3c8] bg-white px-3 py-2 text-xs text-[#475467] shadow-[0_18px_40px_rgba(15,23,42,0.16)]"
           style={{
             left: `${(tooltip.x / width) * 100}%`,
             top: `${Math.max(8, (tooltip.y / height) * 100 - 5)}%`,
           }}
         >
-          <div className="font-semibold text-white">{formatDayLabel(tooltip.point.date)}</div>
+          <div className="font-semibold text-[#1f2937]">{formatDayLabel(tooltip.point.date)}</div>
           <div className="mt-1">Total: {tooltip.point.total}</div>
           <div>Pending: {tooltip.point.pending}</div>
           <div>Confirmed: {tooltip.point.confirmed}</div>
@@ -228,7 +228,7 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
   }, [points]);
 
   if (!bars) {
-    return <div className="grid h-[280px] place-items-center text-sm text-white/45">No chart data.</div>;
+    return <div className="grid h-[280px] place-items-center text-sm text-[#8b97a8]">No chart data.</div>;
   }
 
   return (
@@ -243,10 +243,10 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
                 x2={width - padX}
                 y1={y}
                 y2={y}
-                stroke="rgba(255,255,255,0.12)"
+                stroke="rgba(148,163,184,0.32)"
                 strokeDasharray="3 4"
               />
-              <text x={10} y={y + 4} fontSize="11" fill="rgba(255,255,255,0.55)">
+              <text x={10} y={y + 4} fontSize="11" fill="rgba(100,116,139,0.8)">
                 {tick}
               </text>
             </g>
@@ -261,7 +261,7 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
               width={bars.barWidth}
               height={0}
               rx={2}
-              fill="#61c98f"
+              fill="#10b981"
               initial={{ y: bars.baselineY, height: 0 }}
               animate={{ y: item.completedY, height: item.completedHeight }}
               transition={{ duration: 0.45, delay: item.index * 0.01 }}
@@ -281,7 +281,7 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
               width={bars.barWidth}
               height={0}
               rx={2}
-              fill="#e38a95"
+              fill="#fb7185"
               initial={{ y: bars.baselineY, height: 0 }}
               animate={{ y: item.cancelledY, height: item.cancelledHeight }}
               transition={{ duration: 0.45, delay: item.index * 0.01 + 0.05 }}
@@ -310,7 +310,7 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
               y={height - 8}
               textAnchor="middle"
               fontSize="10"
-              fill="rgba(255,255,255,0.52)"
+              fill="rgba(100,116,139,0.78)"
             >
               {formatDayLabel(item.point.date)}
             </text>
@@ -320,13 +320,13 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
 
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-20 min-w-[210px] -translate-x-1/2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(19,10,11,0.95)] px-3 py-2 text-xs text-[#f7dee1] shadow-2xl"
+          className="pointer-events-none absolute z-20 min-w-[210px] -translate-x-1/2 rounded-xl border border-[#d9c3c8] bg-white px-3 py-2 text-xs text-[#475467] shadow-[0_18px_40px_rgba(15,23,42,0.16)]"
           style={{
             left: `${(tooltip.x / width) * 100}%`,
             top: `${Math.max(8, (tooltip.y / height) * 100 - 5)}%`,
           }}
         >
-          <div className="font-semibold text-white">{formatDayLabel(tooltip.point.date)}</div>
+          <div className="font-semibold text-[#1f2937]">{formatDayLabel(tooltip.point.date)}</div>
           <div className="mt-1">Completed: {tooltip.point.completed}</div>
           <div>Cancelled/Declined: {tooltip.point.cancelled}</div>
           <div>Total Reservations: {tooltip.point.total}</div>

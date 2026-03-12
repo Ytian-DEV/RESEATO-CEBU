@@ -16,14 +16,18 @@ export default function AppShell() {
     pathname.startsWith("/payment/");
 
   const isVendorFullBleed = pathname.startsWith("/vendor");
-  const fullBleed = hideNavbar || isCustomerFullBleed || isVendorFullBleed;
+  const isAdminFullBleed = pathname.startsWith("/admin");
+
+  const fullBleed = hideNavbar || isCustomerFullBleed || isVendorFullBleed || isAdminFullBleed;
+  const appShellClass = isAdminFullBleed ? "min-h-screen bg-[#f3f3f4]" : "min-h-screen";
+  const fullBleedClass = isAdminFullBleed ? "min-h-screen bg-[#f3f3f4]" : undefined;
 
   return (
-    <div className="min-h-screen">
+    <div className={appShellClass}>
       {!hideNavbar && <Navbar />}
 
       {fullBleed ? (
-        <main>
+        <main className={fullBleedClass}>
           <Outlet />
         </main>
       ) : (
