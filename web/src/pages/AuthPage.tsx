@@ -697,6 +697,18 @@ export default function AuthPage() {
                 toggleShow={() => setShowPassword((s) => !s)}
               />
 
+              {mode === "login" && (
+                <div className="-mt-2 flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    state={{ email: email.trim() }}
+                    className="text-xs font-semibold text-[#7b2f3b] hover:text-[#923f4a]"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
               {mode === "signup" && (
                 <>
                   <PasswordField

@@ -5,7 +5,7 @@ export default function AppShell() {
   const location = useLocation();
   const { pathname } = location;
 
-  const isAuthPage = pathname === "/log-in-sign-up";
+  const isAuthPage = pathname === "/log-in-sign-up" || pathname === "/forgot-password" || pathname === "/reset-password";
   const isHomePage = pathname === "/";
   const hideNavbar = isAuthPage || isHomePage;
 
@@ -38,3 +38,4 @@ export default function AppShell() {
     </div>
   );
 }
+
