@@ -5,11 +5,14 @@ export default function AppShell() {
   const { pathname } = useLocation();
 
   const isAuthPage = pathname === "/log-in-sign-up";
-  const fullBleed = isAuthPage || pathname === "/" || pathname.startsWith("/restaurants/");
+  const isHomePage = pathname === "/";
+  const hideNavbar = isAuthPage || isHomePage;
+
+  const fullBleed = hideNavbar || pathname.startsWith("/restaurants/");
 
   return (
     <div className="min-h-screen">
-      {!isAuthPage && <Navbar />}
+      {!hideNavbar && <Navbar />}
 
       {fullBleed ? (
         <main>
