@@ -17,6 +17,7 @@ import {
 } from "../lib/api/vendor.api";
 import { ApiError } from "../lib/api/client";
 import { useAuth } from "../lib/auth/useAuth";
+import VendorPageReveal from "../components/vendor/VendorPageReveal";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
@@ -275,7 +276,7 @@ export default function VendorReservationsPage() {
           </div>
         </section>
 
-        <section className="mt-5 space-y-3">
+        <section className="mt-5">
           {loading ? (
             <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#5b6374] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
               <div className="inline-flex items-center gap-2">
@@ -283,7 +284,9 @@ export default function VendorReservationsPage() {
                 Loading reservations...
               </div>
             </div>
-          ) : reservations.length === 0 ? (
+          ) : (
+            <VendorPageReveal className="space-y-3">
+              {reservations.length === 0 ? (
             <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#6b7280] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
               No reservations found.
             </div>
@@ -408,9 +411,13 @@ export default function VendorReservationsPage() {
                 </article>
               );
             })
+              )}
+            </VendorPageReveal>
           )}
         </section>
       </div>
     </div>
   );
 }
+
+

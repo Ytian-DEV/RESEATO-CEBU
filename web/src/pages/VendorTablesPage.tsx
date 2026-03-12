@@ -5,6 +5,7 @@ import {
   CalendarClock,
   Loader2,
   MapPin,
+  PackagePlus,
   Settings2,
   Store,
   UtensilsCrossed,
@@ -12,6 +13,7 @@ import {
 import { listVendorRestaurants, VendorRestaurant } from "../lib/api/vendor.api";
 import { ApiError } from "../lib/api/client";
 import { useAuth } from "../lib/auth/useAuth";
+import VendorPageReveal from "../components/vendor/VendorPageReveal";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
@@ -161,73 +163,84 @@ export default function VendorTablesPage() {
                 Loading assigned restaurants...
               </div>
             </div>
-          ) : restaurants.length === 0 ? (
-            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-8 text-center shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-[#e5e7eb] bg-[#fcfcfd] text-[#8b3d4a]">
-                <Store className="h-5 w-5" />
-              </div>
-              <h2 className="mt-3 text-xl font-semibold text-[#1f2937]">No assigned restaurant yet</h2>
-              <p className="mt-2 text-sm text-[#6b7280]">
-                Ask admin to assign your vendor account to a restaurant profile.
-              </p>
-            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {restaurants.map((restaurant) => (
-                <article
-                  key={restaurant.id}
-                  className="overflow-hidden rounded-3xl border border-[#e8e2e3] bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
-                >
-                  {restaurant.imageUrl ? (
-                    <img
-                      src={restaurant.imageUrl}
-                      alt={restaurant.name}
-                      className="h-44 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-44 w-full place-items-center bg-[linear-gradient(135deg,#f7ebee_0%,#f5f7fb_100%)] text-[#8b3d4a]">
-                      <UtensilsCrossed className="h-8 w-8" />
-                    </div>
-                  )}
-
-                  <div className="space-y-3 p-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-[#1f2937]">{restaurant.name}</h3>
-                      <p className="mt-1 text-sm text-[#6b7280]">{restaurant.cuisine}</p>
-                    </div>
-
-                    <div className="space-y-1 text-sm text-[#4b5563]">
-                      <div className="inline-flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-[#8b97a8]" />
-                        <span className="line-clamp-1">{restaurant.location}</span>
-                      </div>
-                      <div className="inline-flex items-center gap-2">
-                        <Store className="h-4 w-4 text-[#8b97a8]" />
-                        <span>{restaurant.totalTables} total tables</span>
-                      </div>
-                      <div className="inline-flex items-center gap-2">
-                        <Settings2 className="h-4 w-4 text-[#8b97a8]" />
-                        <span>Price Level {formatPriceLevel(restaurant.priceLevel)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Link
-                        to={`/vendor/restaurants/${restaurant.id}/slots`}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] hover:bg-[#f3dde1]"
-                      >
-                        Configure Tables
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
+            <VendorPageReveal>
+              {restaurants.length === 0 ? (
+                <div className="rounded-3xl border border-[#e8e2e3] bg-white p-8 text-center shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-[#e5e7eb] bg-[#fcfcfd] text-[#8b3d4a]">
+                    <Store className="h-5 w-5" />
                   </div>
-                </article>
-              ))}
-            </div>
+                  <h2 className="mt-3 text-xl font-semibold text-[#1f2937]">No assigned restaurant yet</h2>
+                  <p className="mt-2 text-sm text-[#6b7280]">
+                    Ask admin to assign your vendor account to a restaurant profile.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {restaurants.map((restaurant) => (
+                    <article
+                      key={restaurant.id}
+                      className="overflow-hidden rounded-3xl border border-[#e8e2e3] bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+                    >
+                      {restaurant.imageUrl ? (
+                        <img
+                          src={restaurant.imageUrl}
+                          alt={restaurant.name}
+                          className="h-44 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="grid h-44 w-full place-items-center bg-[linear-gradient(135deg,#f7ebee_0%,#f5f7fb_100%)] text-[#8b3d4a]">
+                          <UtensilsCrossed className="h-8 w-8" />
+                        </div>
+                      )}
+
+                      <div className="space-y-3 p-4">
+                        <div>
+                          <h3 className="text-xl font-semibold text-[#1f2937]">{restaurant.name}</h3>
+                          <p className="mt-1 text-sm text-[#6b7280]">{restaurant.cuisine}</p>
+                        </div>
+
+                        <div className="space-y-1 text-sm text-[#4b5563]">
+                          <div className="inline-flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-[#8b97a8]" />
+                            <span className="line-clamp-1">{restaurant.location}</span>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <Store className="h-4 w-4 text-[#8b97a8]" />
+                            <span>{restaurant.totalTables} total tables</span>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <Settings2 className="h-4 w-4 text-[#8b97a8]" />
+                            <span>Price Level {formatPriceLevel(restaurant.priceLevel)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Link
+                            to={`/vendor/restaurants/${restaurant.id}/slots`}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] hover:bg-[#f3dde1]"
+                          >
+                            Configure Tables
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+
+                          <Link
+                            to={`/vendor/restaurants/${restaurant.id}/best-sellers`}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#d8dbe2] bg-white px-3 py-2 text-xs font-semibold text-[#374151] hover:bg-[#f8fafc]"
+                          >
+                            Manage Best Sellers
+                            <PackagePlus className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </VendorPageReveal>
           )}
         </section>
       </div>
     </div>
   );
 }
-

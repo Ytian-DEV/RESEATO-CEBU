@@ -16,6 +16,7 @@ import {
 } from "../lib/api/vendor.api";
 import { ApiError } from "../lib/api/client";
 import { useAuth } from "../lib/auth/useAuth";
+import VendorPageReveal from "../components/vendor/VendorPageReveal";
 
 const DAY_OPTIONS = [
   { value: 0, label: "Sunday" },
@@ -444,6 +445,7 @@ export default function VendorSlotsPage() {
             </div>
           </div>
         ) : (
+          <VendorPageReveal>
           <section className="mt-6 rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -589,8 +591,11 @@ export default function VendorSlotsPage() {
               Inactive slots stay in config but are hidden from customer booking.
             </div>
           </section>
+          </VendorPageReveal>
         )}
       </div>
     </div>
   );
 }
+
+

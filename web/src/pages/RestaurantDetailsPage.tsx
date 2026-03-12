@@ -8,7 +8,7 @@ import {
 import { createReservation, getSlots, Slot } from "../lib/api/reservations.api";
 import { useAuth } from "../lib/auth/useAuth";
 import { ApiError } from "../lib/api/client";
-import { ArrowLeft, Mail, MapPin, Phone, Star, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone, Star, TrendingUp, UtensilsCrossed } from "lucide-react";
 
 function todayISO() {
   const d = new Date();
@@ -29,6 +29,13 @@ function formatPrettyDate(iso: string) {
   });
 }
 
+function toPesoFromMinor(minor: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format((Number(minor) || 0) / 100);
+}
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -67,6 +74,7 @@ export default function RestaurantDetailsPage() {
   const heroUrl =
     data?.imageUrl ??
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2400&q=80&sat=-10";
+  const bestSellers = data?.bestSellers ?? [];
 
   useEffect(() => {
     if (!id) return;
@@ -283,7 +291,7 @@ export default function RestaurantDetailsPage() {
           <div className="space-y-6">
             <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1)]">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#1f2937]">
+                <h2 className="text-xl font-semibold text-[#1f2937] sm:text-2xl">
                   About the Restaurant
                 </h2>
                 <span className="text-xs text-[#6b7280]">
@@ -325,12 +333,70 @@ export default function RestaurantDetailsPage() {
             </div>
 
             <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
-              <h3 className="text-base font-semibold text-[#1f2937]">
-                House notes
+              <h3 className="text-lg font-semibold text-[#1f2937] sm:text-xl">
+                House rules
               </h3>
               <p className="mt-2 text-sm text-[#667085]">
-                Add policies here later (cancellation window, dress code, etc.).
+                Please arrive 10 minutes early. Reservations may be released after a short grace period,
+                and special requests are subject to availability.
               </p>
+            </div>
+
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-lg font-semibold text-[#1f2937] sm:text-xl">Best Sellers</h3>
+                <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-xs font-medium text-[#6b7280]">
+                  {bestSellers.length} item{bestSellers.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-[#667085]">
+                Popular picks you might want to try when you dine in.
+              </p>
+
+              {bestSellers.length === 0 ? (
+                <div className="mt-4 rounded-2xl border border-[#ece8e9] bg-[#fafafa] px-4 py-3 text-sm text-[#667085]">
+                  No best-seller items available yet for this restaurant.
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {bestSellers.map((item) => (
+                    <article
+                      key={item.id}
+                      className="overflow-hidden rounded-2xl border border-[#ece8e9] bg-[#fcfcfd]"
+                    >
+                      <div className="relative h-40 overflow-hidden">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#f7ebee_0%,#f5f7fb_100%)] text-[#8b3d4a]">
+                            <UtensilsCrossed className="h-8 w-8" aria-hidden />
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+                        <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/35 bg-black/35 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
+                          <TrendingUp className="h-3 w-3" aria-hidden /> {item.soldCount} sold
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <div className="text-base font-semibold text-[#1f2937]">{item.name}</div>
+                        <div className="mt-1 text-xs text-[#6b7280]">
+                          {item.stockQuantity > 0
+                            ? `${item.stockQuantity} in stock`
+                            : "Limited availability"}
+                        </div>
+                        <div className="mt-3 text-lg font-semibold text-[#7b2f3b]">
+                          {toPesoFromMinor(item.priceMinor)}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -338,7 +404,7 @@ export default function RestaurantDetailsPage() {
             <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#1f2937]">
+                  <h2 className="text-xl font-semibold text-[#1f2937] sm:text-2xl">
                     Book a Table
                   </h2>
                   <p className="mt-1 text-sm text-[#6b7280]">
@@ -554,5 +620,3 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
-
-
