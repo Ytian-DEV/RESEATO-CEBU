@@ -806,14 +806,14 @@ function Field(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-[#4b5563]">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
+      <div className="auth-field flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
         <span className="text-[#9ca3af]">{props.icon}</span>
         <input
           type={props.type ?? "text"}
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
           placeholder={props.placeholder}
-          className="w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#9ca3af]"
+          className="auth-input w-full bg-transparent text-sm text-[#111827] placeholder:text-[#9ca3af]"
         />
       </div>
     </label>
@@ -831,13 +831,13 @@ function PasswordField(props: {
   return (
     <label className="block space-y-1">
       <div className="text-sm text-[#4b5563]">{props.label}</div>
-      <div className="flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
+      <div className="auth-field flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2.5">
         <span className="text-[#9ca3af]">{props.icon}</span>
         <input
           type={props.show ? "text" : "password"}
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
-          className="w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#9ca3af]"
+          className="auth-input w-full bg-transparent text-sm text-[#111827] placeholder:text-[#9ca3af]"
           placeholder="********"
         />
         <button
@@ -851,6 +851,8 @@ function PasswordField(props: {
     </label>
   );
 }
+
+
 
 
 
