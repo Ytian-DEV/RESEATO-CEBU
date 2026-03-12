@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UtensilsCrossed } from "lucide-react";
 import { useSession } from "../lib/auth/useSession";
+import { getPostAuthRedirect } from "../lib/auth/roleRedirect";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -15,9 +16,10 @@ export default function HomePage() {
     navigate("/log-in-sign-up");
   }
 
-  function onGetStarted() {
+  async function onGetStarted() {
     if (session) {
-      navigate("/restaurants");
+      const target = await getPostAuthRedirect(session);
+      navigate(target);
       return;
     }
     navigate("/log-in-sign-up");
@@ -98,6 +100,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-
-

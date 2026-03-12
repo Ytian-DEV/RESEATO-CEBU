@@ -246,58 +246,58 @@ export default function VendorRestaurantsPage() {
     return (
       <>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Name
             <input
               value={state.name}
               onChange={(event) =>
                 setState({ ...state, name: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="Restaurant name"
               required
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Cuisine
             <input
               value={state.cuisine}
               onChange={(event) =>
                 setState({ ...state, cuisine: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="Cuisine"
               required
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Location
             <input
               value={state.location}
               onChange={(event) =>
                 setState({ ...state, location: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="Address"
               required
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Phone Number
             <input
               value={state.contactPhone}
               onChange={(event) =>
                 setState({ ...state, contactPhone: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="09xxxxxxxxx"
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Contact Email
             <input
               type="email"
@@ -305,12 +305,12 @@ export default function VendorRestaurantsPage() {
               onChange={(event) =>
                 setState({ ...state, contactEmail: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="restaurant@email.com"
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Price Level (1-4)
             <input
               type="number"
@@ -320,11 +320,11 @@ export default function VendorRestaurantsPage() {
               onChange={(event) =>
                 setState({ ...state, priceLevel: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
             />
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-sm text-[#4b5563]">
             Total Tables
             <input
               type="number"
@@ -334,18 +334,18 @@ export default function VendorRestaurantsPage() {
               onChange={(event) =>
                 setState({ ...state, totalTables: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
             />
           </label>
 
-          <label className="text-sm text-white/80 sm:col-span-2">
+          <label className="text-sm text-[#4b5563] sm:col-span-2">
             Image URL
             <input
               value={state.imageUrl}
               onChange={(event) =>
                 setState({ ...state, imageUrl: event.target.value })
               }
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+              className="mt-1 w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
               placeholder="https://..."
             />
 
@@ -354,7 +354,7 @@ export default function VendorRestaurantsPage() {
                 type="button"
                 onClick={() => document.getElementById(imageInputId)?.click()}
                 disabled={uploadingImage}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-semibold text-white/85 hover:bg-black/35 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] hover:bg-[#f3dde1] disabled:opacity-60"
               >
                 {uploadingImage ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -364,7 +364,7 @@ export default function VendorRestaurantsPage() {
                 {uploadingImage ? "Uploading..." : "Upload Image"}
               </button>
 
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[#6b7280]">
                 Upload from local file to Supabase Storage (max 8MB).
               </span>
             </div>
@@ -381,10 +381,10 @@ export default function VendorRestaurantsPage() {
               <img
                 src={state.imageUrl}
                 alt="Restaurant preview"
-                className="mt-3 h-28 w-full rounded-xl border border-white/10 object-cover"
+                className="mt-3 h-28 w-full rounded-xl border border-[#ddd8da] object-cover"
               />
             ) : (
-              <div className="mt-3 inline-flex items-center gap-2 text-xs text-white/45">
+              <div className="mt-3 inline-flex items-center gap-2 text-xs text-[#8b97a8]">
                 <ImagePlus className="h-3.5 w-3.5" />
                 No image selected
               </div>
@@ -392,14 +392,14 @@ export default function VendorRestaurantsPage() {
           </label>
         </div>
 
-        <label className="mt-3 block text-sm text-white/80">
+        <label className="mt-3 block text-sm text-[#4b5563]">
           Description
           <textarea
             value={state.description}
             onChange={(event) =>
               setState({ ...state, description: event.target.value })
             }
-            className="mt-1 min-h-[84px] w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-white outline-none focus:border-[var(--maroon-light)]"
+            className="mt-1 min-h-[84px] w-full rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-sm text-[#1f2937] outline-none focus:border-[#b46d73]"
             placeholder="Restaurant description"
           />
         </label>
@@ -409,178 +409,189 @@ export default function VendorRestaurantsPage() {
 
   if (authLoading) {
     return (
-      <div className="inline-flex items-center gap-2 text-white/70">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Checking session...
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="inline-flex items-center gap-2 text-[#5b6374]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Checking session...
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!isAuthed) {
     return (
-      <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/85">
-        Login is required to access vendor restaurants.
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
+            Login is required to access vendor restaurants.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5a6ab]">
-          Vendor Portal
-        </p>
-        <h1 className="mt-2 text-5xl text-white">Restaurant Management</h1>
-        <p className="mt-1 text-sm text-white/65">
-          Add and maintain your restaurants, table capacity, and details.
-        </p>
-      </header>
-      {message && (
-        <div className="mt-5 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
-          {message}
-        </div>
-      )}
+    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b3d4a]">
+            Vendor Portal
+          </p>
+          <h1 className="mt-2 text-5xl text-[#1f2937]">Restaurant Management</h1>
+          <p className="mt-1 text-sm text-[#5b6374]">
+            Add and maintain your restaurants, table capacity, and details.
+          </p>
+        </header>
 
-      <section className="mt-6 rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl text-white">Create Restaurant</h2>
-          <span className="text-sm text-white/65">Total: {restaurantCount}</span>
-        </div>
+        {message && (
+          <div className="mt-5 rounded-2xl border border-[#f2cccf] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
+            {message}
+          </div>
+        )}
 
-        <form className="mt-4" onSubmit={onCreate}>
-          {renderFormFields({
-            state: createForm,
-            setState: setCreateForm,
-            imageInputId: "create-restaurant-image",
-            uploadingImage: uploadingCreateImage,
-            onUploadImage: uploadImageForCreate,
-          })}
-          <button
-            type="submit"
-            disabled={savingCreate}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[rgba(127,58,65,0.3)] disabled:opacity-60"
-          >
-            {savingCreate ? (
-              <>
+        <section className="mt-6 rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl text-[#1f2937]">Create Restaurant</h2>
+            <span className="text-sm text-[#6b7280]">Total: {restaurantCount}</span>
+          </div>
+
+          <form className="mt-4" onSubmit={onCreate}>
+            {renderFormFields({
+              state: createForm,
+              setState: setCreateForm,
+              imageInputId: "create-restaurant-image",
+              uploadingImage: uploadingCreateImage,
+              onUploadImage: uploadImageForCreate,
+            })}
+            <button
+              type="submit"
+              disabled={savingCreate}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-4 py-2.5 text-sm font-semibold text-[#7b2f3b] hover:bg-[#f3dde1] disabled:opacity-60"
+            >
+              {savingCreate ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Create Restaurant
+                </>
+              )}
+            </button>
+          </form>
+        </section>
+
+        <section className="mt-5 space-y-4">
+          {loading ? (
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#5b6374] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+              <div className="inline-flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                Create Restaurant
-              </>
-            )}
-          </button>
-        </form>
-      </section>
-
-      <section className="mt-5 space-y-4">
-        {loading ? (
-          <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/70">
-            <div className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading restaurants...
+                Loading restaurants...
+              </div>
             </div>
-          </div>
-        ) : restaurants.length === 0 ? (
-          <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/70">
-            No restaurants found.
-          </div>
-        ) : (
-          restaurants.map((restaurant) => {
-            const isEditing = editingRestaurantId === restaurant.id;
+          ) : restaurants.length === 0 ? (
+            <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#6b7280] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+              No restaurants found.
+            </div>
+          ) : (
+            restaurants.map((restaurant) => {
+              const isEditing = editingRestaurantId === restaurant.id;
 
-            return (
-              <article
-                key={restaurant.id}
-                className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-3xl text-white">{restaurant.name}</h3>
-                    <p className="text-sm text-white/65">
-                      {restaurant.cuisine} - {restaurant.location}
-                    </p>
-                    <p className="mt-1 text-xs uppercase tracking-wide text-white/45">
-                      Tables available: {restaurant.totalTables}
-                    </p>
-                  </div>
+              return (
+                <article
+                  key={restaurant.id}
+                  className="rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-3xl text-[#1f2937]">{restaurant.name}</h3>
+                      <p className="text-sm text-[#6b7280]">
+                        {restaurant.cuisine} - {restaurant.location}
+                      </p>
+                      <p className="mt-1 text-xs uppercase tracking-wide text-[#8b97a8]">
+                        Tables available: {restaurant.totalTables}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      to={`/vendor/restaurants/${restaurant.id}/slots`}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white/85 hover:bg-black/30"
-                    >
-                      <Store className="h-3.5 w-3.5" />
-                      Manage Slots
-                    </Link>
-
-                    {isEditing ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => saveEdit(restaurant.id)}
-                          disabled={savingEdit}
-                          className="inline-flex items-center gap-2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.2)] px-3 py-2 text-xs font-semibold text-white hover:bg-[rgba(127,58,65,0.3)] disabled:opacity-60"
-                        >
-                          {savingEdit ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Save className="h-3.5 w-3.5" />
-                          )}
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEdit}
-                          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-black/30"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => startEdit(restaurant)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white/85 hover:bg-black/30"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/vendor/restaurants/${restaurant.id}/slots`}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] hover:bg-[#f3dde1]"
                       >
-                        <PencilLine className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                </div>
+                        <Store className="h-3.5 w-3.5" />
+                        Manage Slots
+                      </Link>
 
-                {isEditing ? (
-                  <div className="mt-4">
-                    {renderFormFields({
-                      state: editForm,
-                      setState: setEditForm,
-                      imageInputId: `edit-restaurant-image-${restaurant.id}`,
-                      uploadingImage: uploadingEditImageId === restaurant.id,
-                      onUploadImage: uploadImageForEdit,
-                    })}
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/75">
-                    <p>{restaurant.description || "No description provided."}</p>
-                    <div className="grid gap-2 text-xs text-white/55 sm:grid-cols-2">
-                      <div>
-                        Phone: {restaurant.contactPhone || "Not provided"}
-                      </div>
-                      <div>
-                        Email: {restaurant.contactEmail || "Not provided"}
-                      </div>
+                      {isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(restaurant.id)}
+                            disabled={savingEdit}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] hover:bg-[#f3dde1] disabled:opacity-60"
+                          >
+                            {savingEdit ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Save className="h-3.5 w-3.5" />
+                            )}
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-xs font-semibold text-[#4b5563] hover:bg-[#f8fafc]"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(restaurant)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-[#ddd8da] bg-white px-3 py-2 text-xs font-semibold text-[#4b5563] hover:bg-[#f8fafc]"
+                        >
+                          <PencilLine className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
-              </article>
-            );
-          })
-        )}
-      </section>
+
+                  {isEditing ? (
+                    <div className="mt-4">
+                      {renderFormFields({
+                        state: editForm,
+                        setState: setEditForm,
+                        imageInputId: `edit-restaurant-image-${restaurant.id}`,
+                        uploadingImage: uploadingEditImageId === restaurant.id,
+                        onUploadImage: uploadImageForEdit,
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3 rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 text-sm text-[#4b5563]">
+                      <p>{restaurant.description || "No description provided."}</p>
+                      <div className="grid gap-2 text-xs text-[#6b7280] sm:grid-cols-2">
+                        <div>
+                          Phone: {restaurant.contactPhone || "Not provided"}
+                        </div>
+                        <div>
+                          Email: {restaurant.contactEmail || "Not provided"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })
+          )}
+        </section>
+      </div>
     </div>
   );
 }

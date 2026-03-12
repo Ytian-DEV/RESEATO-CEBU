@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   Beef,
   CookingPot,
@@ -18,6 +19,8 @@ import {
 import RestaurantCard from "../components/RestaurantCard";
 import type { Restaurant } from "../lib/types/restaurants";
 import { listRestaurants } from "../lib/api/restaurants.api";
+import { useSession } from "../lib/auth/useSession";
+import { getPostAuthRedirect } from "../lib/auth/roleRedirect";
 
 type Category = {
   key: string;
@@ -208,14 +211,49 @@ function cuisineTone(key: string, active: boolean) {
 }
 
 export default function RestaurantsPage() {
+  const navigate = useNavigate();
+  const { session, loading: sessionLoading } = useSession();
+
   const [items, setItems] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
   useEffect(() => {
+    let alive = true;
+
+    async function ensureAccess() {
+      if (sessionLoading) return;
+
+      if (!session) {
+        if (alive) setAccessChecked(true);
+        return;
+      }
+
+      const target = await getPostAuthRedirect(session);
+      if (!alive) return;
+
+      if (target !== "/restaurants") {
+        navigate(target, { replace: true });
+        return;
+      }
+
+      setAccessChecked(true);
+    }
+
+    void ensureAccess();
+
+    return () => {
+      alive = false;
+    };
+  }, [navigate, session, sessionLoading]);
+
+  useEffect(() => {
+    if (!accessChecked) return;
+
     let alive = true;
 
     (async () => {
@@ -237,8 +275,7 @@ export default function RestaurantsPage() {
     return () => {
       alive = false;
     };
-  }, []);
-
+  }, [accessChecked]);
   const normalizedQuery = useMemo(
     () => query.replace(/\s+/g, " ").trim().toLowerCase(),
     [query],
@@ -266,6 +303,18 @@ export default function RestaurantsPage() {
     });
   }, [items, normalizedQuery, activeCat]);
 
+  if (!accessChecked) {
+    return (
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-6xl items-center px-6 py-8">
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-[#e8e2e3] bg-white px-4 py-3 text-sm text-[#5b6374] shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <UtensilsCrossed className="h-4 w-4 text-[#8b3d4a]" />
+            Checking access...
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (loading) {
     return (
       <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
@@ -466,3 +515,7 @@ export default function RestaurantsPage() {
     </div>
   );
 }
+
+
+
+

@@ -14,7 +14,8 @@ export default function AppShell() {
     pathname === "/profile" ||
     pathname.startsWith("/payment/");
 
-  const fullBleed = hideNavbar || isCustomerFullBleed;
+  const isVendorFullBleed = pathname.startsWith("/vendor");
+  const fullBleed = hideNavbar || isCustomerFullBleed || isVendorFullBleed;
 
   return (
     <div className="min-h-screen">

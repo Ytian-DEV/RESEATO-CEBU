@@ -36,6 +36,16 @@ function toCurrency(minor: number) {
   }).format((Number(minor) || 0) / 100);
 }
 
+const EMPTY_OVERVIEW: VendorOverview = {
+  restaurantCount: 0,
+  reservationCount: 0,
+  pendingCount: 0,
+  confirmedCount: 0,
+  completedCount: 0,
+  paidCount: 0,
+  totalPaidAmountMinor: 0,
+};
+
 export default function VendorDashboardPage() {
   const { isAuthed, loading: authLoading } = useAuth();
   const [overview, setOverview] = useState<VendorOverview | null>(null);
@@ -56,17 +66,36 @@ export default function VendorDashboardPage() {
         setLoading(true);
         setMessage(null);
 
-        const [overviewData, restaurantsData] = await Promise.all([
+        const [overviewResult, restaurantsResult] = await Promise.allSettled([
           getVendorOverview(),
           listVendorRestaurants(),
         ]);
 
         if (!alive) return;
-        setOverview(overviewData);
-        setRestaurants(restaurantsData);
-      } catch (error) {
-        if (!alive) return;
-        setMessage(getErrorMessage(error, "Unable to load vendor dashboard."));
+
+        if (overviewResult.status === "fulfilled") {
+          setOverview(overviewResult.value);
+        } else {
+          setOverview(EMPTY_OVERVIEW);
+        }
+
+        if (restaurantsResult.status === "fulfilled") {
+          setRestaurants(restaurantsResult.value);
+        } else {
+          setRestaurants([]);
+        }
+
+        if (
+          overviewResult.status === "rejected" &&
+          restaurantsResult.status === "rejected"
+        ) {
+          setMessage(
+            getErrorMessage(
+              overviewResult.reason ?? restaurantsResult.reason,
+              "Unable to load vendor dashboard.",
+            ),
+          );
+        }
       } finally {
         if (!alive) return;
         setLoading(false);
@@ -81,20 +110,12 @@ export default function VendorDashboardPage() {
   }, [isAuthed]);
 
   const cards = useMemo(() => {
-    const data = overview ?? {
-      restaurantCount: 0,
-      reservationCount: 0,
-      pendingCount: 0,
-      confirmedCount: 0,
-      completedCount: 0,
-      paidCount: 0,
-      totalPaidAmountMinor: 0,
-    };
+    const data = overview ?? EMPTY_OVERVIEW;
 
     return [
       {
         key: "restaurants",
-        label: "Restaurants",
+        label: "Assigned Restaurants",
         value: data.restaurantCount,
         icon: Building2,
       },
@@ -121,149 +142,154 @@ export default function VendorDashboardPage() {
 
   if (authLoading) {
     return (
-      <div className="inline-flex items-center gap-2 text-white/70">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Checking session...
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="inline-flex items-center gap-2 text-[#5b6374]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Checking session...
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!isAuthed) {
     return (
-      <div className="rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/85">
-        Login is required to access the vendor portal.
+      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
+            Login is required to access the vendor portal.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5a6ab]">
-          Vendor Portal
-        </p>
-        <h1 className="mt-2 text-5xl text-white">Operations Dashboard</h1>
-        <p className="mt-1 text-sm text-white/65">
-          Manage restaurants, slot capacities, and incoming reservations.
-        </p>
-      </header>
-      {message && (
-        <div className="mt-5 rounded-2xl border border-[#b44a53]/40 bg-[#4a1e23]/30 px-4 py-3 text-sm text-[#f6c8cd]">
-          {message}
-        </div>
-      )}
+    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b3d4a]">
+            Vendor Portal
+          </p>
+          <h1 className="mt-2 text-5xl text-[#1f2937]">Dashboard</h1>
+          <p className="mt-1 text-sm text-[#5b6374]">
+            Review reservations and manage table slots for restaurants assigned by admin.
+          </p>
+        </header>
 
-      {loading ? (
-        <div className="mt-6 rounded-3xl border border-[var(--maroon-border)] bg-[var(--maroon-glass)] p-6 text-white/75">
-          <div className="inline-flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading vendor summary...
+        {message && (
+          <div className="mt-5 rounded-2xl border border-[#f2cccf] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
+            {message}
           </div>
-        </div>
-      ) : (
-        <>
-          <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {cards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <article
-                  key={card.key}
-                  className="rounded-2xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/65">{card.label}</span>
-                    <Icon className="h-4 w-4 text-[#d6aab0]" />
-                  </div>
-                  <div className="mt-3 text-4xl font-semibold text-white">
-                    {card.value}
-                  </div>
-                </article>
-              );
-            })}
-          </section>
+        )}
 
-          <section className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <article className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-              <h2 className="text-3xl text-white">Your Restaurants</h2>
-              <p className="mt-1 text-sm text-white/60">
-                Quick access to slot and reservation settings.
-              </p>
+        {loading ? (
+          <div className="mt-6 rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#5b6374] shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <div className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading vendor summary...
+            </div>
+          </div>
+        ) : (
+          <>
+            <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {cards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <article
+                    key={card.key}
+                    className="rounded-2xl border border-[#e8e2e3] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[#6b7280]">{card.label}</span>
+                      <Icon className="h-4 w-4 text-[#8b3d4a]" />
+                    </div>
+                    <div className="mt-3 text-4xl font-semibold text-[#1f2937]">
+                      {card.value}
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
 
-              {restaurants.length === 0 ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-                  No restaurant assigned yet. Create one from the Restaurants tab.
-                </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {restaurants.slice(0, 4).map((restaurant) => (
-                    <div
-                      key={restaurant.id}
-                      className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h3 className="text-xl text-white">{restaurant.name}</h3>
-                          <p className="text-sm text-white/60">
-                            {restaurant.cuisine} - {restaurant.location}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
+            <section className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <article className="rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                <h2 className="text-3xl text-[#1f2937]">Assigned Restaurants</h2>
+                <p className="mt-1 text-sm text-[#5b6374]">
+                  Assigned and managed by admin. You can only configure table slots.
+                </p>
+
+                {restaurants.length === 0 ? (
+                  <div className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] p-4 text-sm text-[#4b5563]">
+                    No restaurant assigned yet. Ask admin to assign your vendor profile.
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {restaurants.slice(0, 4).map((restaurant) => (
+                      <div
+                        key={restaurant.id}
+                        className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-xl text-[#1f2937]">{restaurant.name}</h3>
+                            <p className="text-sm text-[#6b7280]">
+                              {restaurant.cuisine} - {restaurant.location}
+                            </p>
+                          </div>
                           <Link
                             to={`/vendor/restaurants/${restaurant.id}/slots`}
-                            className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-medium text-white/85 hover:bg-black/35"
+                            className="rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-medium text-[#7b2f3b] hover:bg-[#f3dde1]"
                           >
-                            Configure Slots
+                            Configure Tables
                           </Link>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
+                    ))}
+                  </div>
+                )}
+              </article>
 
-            <article className="rounded-3xl border border-[var(--maroon-border)] bg-[rgba(255,255,255,0.04)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-              <h2 className="text-3xl text-white">Revenue Snapshot</h2>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="flex items-center justify-between text-white/65">
-                  <span>Paid reservations</span>
-                  <CircleDollarSign className="h-4 w-4 text-[#d6aab0]" />
+              <article className="rounded-3xl border border-[#e8e2e3] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                <h2 className="text-3xl text-[#1f2937]">Revenue Snapshot</h2>
+                <div className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4">
+                  <div className="flex items-center justify-between text-[#6b7280]">
+                    <span>Paid reservations</span>
+                    <CircleDollarSign className="h-4 w-4 text-[#8b3d4a]" />
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold text-[#1f2937]">
+                    {overview?.paidCount ?? 0}
+                  </div>
                 </div>
-                <div className="mt-2 text-2xl font-semibold text-white">
-                  {overview?.paidCount ?? 0}
-                </div>
-              </div>
 
-              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-white/65">Collected reservation fees</div>
-                <div className="mt-2 text-3xl font-semibold text-[#f3c5cb]">
-                  {toCurrency(overview?.totalPaidAmountMinor ?? 0)}
+                <div className="mt-3 rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4">
+                  <div className="text-[#6b7280]">Collected reservation fees</div>
+                  <div className="mt-2 text-3xl font-semibold text-[#7b2f3b]">
+                    {toCurrency(overview?.totalPaidAmountMinor ?? 0)}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-4 space-y-2">
-                <Link
-                  to="/vendor/reservations"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(127,58,65,0.45)] bg-[rgba(127,58,65,0.18)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[rgba(127,58,65,0.28)]"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  Review Reservations
-                </Link>
-                <Link
-                  to="/vendor/restaurants"
-                  className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm font-semibold text-white/85 hover:bg-black/30"
-                >
-                  Manage Restaurants
-                </Link>
-              </div>
-            </article>
-          </section>
-        </>
-      )}
+                <div className="mt-4 space-y-2">
+                  <Link
+                    to="/vendor/reservations"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#c98d98] bg-[#f8ecee] px-4 py-2.5 text-sm font-semibold text-[#7b2f3b] hover:bg-[#f3dde1]"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Open Reservation List
+                  </Link>
+                  <Link
+                    to="/vendor/tables"
+                    className="inline-flex w-full items-center justify-center rounded-xl border border-[#d8dbe2] bg-white px-4 py-2.5 text-sm font-semibold text-[#374151] hover:bg-[#f8fafc]"
+                  >
+                    Manage Tables
+                  </Link>
+                </div>
+              </article>
+            </section>
+          </>
+        )}
+      </div>
     </div>
   );
 }
-
-
-
-

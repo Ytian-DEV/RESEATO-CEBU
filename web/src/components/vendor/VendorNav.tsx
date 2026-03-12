@@ -3,8 +3,8 @@ import { NavLink } from "react-router-dom";
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-xl border px-4 py-2 text-sm font-medium transition ${
     isActive
-      ? "border-[#8b3e46] bg-[rgba(127,58,65,0.25)] text-white"
-      : "border-white/10 bg-black/20 text-white/70 hover:bg-black/30 hover:text-white"
+      ? "border-[#c98d98] bg-[#f8ecee] text-[#7b2f3b]"
+      : "border-[#ddd8da] bg-white text-[#5b6374] hover:bg-[#f8fafc] hover:text-[#1f2937]"
   }`;
 
 export default function VendorNav() {
@@ -13,11 +13,11 @@ export default function VendorNav() {
       <NavLink to="/vendor" end className={tabClass}>
         Dashboard
       </NavLink>
-      <NavLink to="/vendor/restaurants" className={tabClass}>
-        Restaurants
-      </NavLink>
       <NavLink to="/vendor/reservations" className={tabClass}>
-        Reservations
+        Reservation List
+      </NavLink>
+      <NavLink to="/vendor/tables" className={tabClass}>
+        Tables
       </NavLink>
     </nav>
   );

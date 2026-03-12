@@ -74,8 +74,8 @@ function getNavItems(roleKind: RoleKind): NavItem[] {
   if (roleKind === "vendor") {
     return [
       { to: "/vendor", label: "Dashboard", end: true },
-      { to: "/vendor/restaurants", label: "Restaurants" },
-      { to: "/vendor/reservations", label: "Reservations" },
+      { to: "/vendor/reservations", label: "Reservation List" },
+      { to: "/vendor/tables", label: "Tables" },
     ];
   }
 
@@ -506,4 +506,3 @@ export default function Navbar() {
     </header>
   );
 }
-
