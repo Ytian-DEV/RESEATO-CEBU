@@ -190,6 +190,41 @@ function getMissingColumnName(error: any) {
   return plain ?? null;
 }
 
+function normalizeEmail(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function findAuthUserByEmail(email: string) {
+  const target = normalizeEmail(email);
+  if (!target) return null;
+
+  const perPage = 200;
+  for (let page = 1; page <= 25; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const users = data?.users ?? [];
+    const match = users.find(
+      (user) => normalizeEmail(user.email) === target,
+    );
+
+    if (match) return match;
+    if (users.length < perPage) break;
+  }
+
+  return null;
+}
+
 async function sendEmailNotification(to: string, subject: string, html: string) {
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL || !to) {
     return false;
@@ -770,6 +805,73 @@ app.get("/health", (_req, res) => {
     service: "api",
     timestamp: new Date().toISOString(),
   });
+});
+
+app.post("/auth/forgot-password", async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ message: "Please enter a valid email address." });
+  }
+
+  try {
+    const existingUser = await findAuthUserByEmail(email);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "Email is not registered. Please check spelling and try again.",
+      });
+    }
+
+    const requestedRedirectTo = String(req.body?.redirectTo ?? "").trim();
+    const fallbackRedirectTo = `${APP_BASE_URL}/reset-password`;
+    let redirectTo = fallbackRedirectTo;
+
+    if (requestedRedirectTo) {
+      try {
+        const requestedUrl = new URL(requestedRedirectTo);
+        const allowedOrigins = new Set<string>();
+
+        for (const origin of WEB_ORIGINS) {
+          try {
+            allowedOrigins.add(new URL(origin).origin);
+          } catch {
+            // ignore malformed origin values
+          }
+        }
+
+        try {
+          allowedOrigins.add(new URL(APP_BASE_URL).origin);
+        } catch {
+          // ignore malformed app base url
+        }
+
+        if (!allowedOrigins.has(requestedUrl.origin)) {
+          return res.status(400).json({ message: "Invalid reset redirect URL." });
+        }
+
+        redirectTo = requestedUrl.toString();
+      } catch {
+        return res.status(400).json({ message: "Invalid reset redirect URL." });
+      }
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Password reset email sent. Please check your inbox.",
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error?.message ?? "Unable to process forgot password request.",
+    });
+  }
 });
 
 app.get("/restaurants", async (_req, res) => {
