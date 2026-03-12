@@ -2,7 +2,8 @@ import Navbar from "../components/layouts/Navbar";
 import { Outlet, useLocation } from "react-router-dom";
 
 export default function AppShell() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
 
   const isAuthPage = pathname === "/log-in-sign-up";
   const isHomePage = pathname === "/";
