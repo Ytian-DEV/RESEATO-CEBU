@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UtensilsCrossed } from "lucide-react";
@@ -6,23 +7,54 @@ import { getPostAuthRedirect } from "../lib/auth/roleRedirect";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { session } = useSession();
+  const { session, loading } = useSession();
 
-  function onSignIn() {
+  useEffect(() => {
+    let alive = true;
+
+    async function redirectAuthedUser() {
+      if (loading || !session) return;
+
+      const target = await getPostAuthRedirect(session);
+      if (!alive) return;
+
+      if (target !== "/") {
+        navigate(target, { replace: true });
+      }
+    }
+
+    void redirectAuthedUser();
+
+    return () => {
+      alive = false;
+    };
+  }, [loading, navigate, session]);
+
+  async function onSignIn() {
     if (session) {
-      navigate("/profile");
+      const target = await getPostAuthRedirect(session);
+      navigate(target, { replace: true });
       return;
     }
+
     navigate("/log-in-sign-up");
   }
 
   async function onGetStarted() {
     if (session) {
       const target = await getPostAuthRedirect(session);
-      navigate(target);
+      navigate(target, { replace: true });
       return;
     }
     navigate("/log-in-sign-up");
+  }
+
+  if (loading) {
+    return <div className="h-screen bg-black" />;
+  }
+
+  if (session) {
+    return null;
   }
 
   return (
@@ -79,8 +111,8 @@ export default function HomePage() {
             </h1>
 
             <p className="mx-auto mt-3 max-w-[740px] text-[clamp(0.98rem,1.35vw,1.45rem)] leading-[1.32] font-medium text-white/95 drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]">
-              Book the Best Tables at Top Rated Restaurants, Skip the Line, Enjoy the Dine and
-              Suggest What&apos;s Best.
+              Book the Best Tables at Top Rated Restaurants, Skip the Line,
+              Enjoy the Dine and Suggest What&apos;s Best.
             </p>
           </motion.div>
         </section>
