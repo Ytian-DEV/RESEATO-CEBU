@@ -96,6 +96,67 @@ function parsePositiveInt(value: unknown, fallback: number, min = 1, max = 999) 
   return normalized;
 }
 
+function normalizeDateString(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+
+  const [year, month, day] = raw.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(dt.getTime())) return null;
+
+  const normalized = dt.toISOString().slice(0, 10);
+  return normalized === raw ? raw : null;
+}
+
+function formatDateKeyUTC(date: Date) {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  )
+    .toISOString()
+    .slice(0, 10);
+}
+
+function shiftDateKey(dateKey: string, days: number) {
+  const normalized = normalizeDateString(dateKey);
+  if (!normalized) return null;
+
+  const base = new Date(`${normalized}T00:00:00.000Z`);
+  if (Number.isNaN(base.getTime())) return null;
+
+  const shifted = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  return formatDateKeyUTC(shifted);
+}
+
+function createDateRangeKeys(from: string, to: string) {
+  const normalizedFrom = normalizeDateString(from);
+  const normalizedTo = normalizeDateString(to);
+  if (!normalizedFrom || !normalizedTo) return [] as string[];
+  if (normalizedFrom > normalizedTo) return [] as string[];
+
+  const fromDate = new Date(`${normalizedFrom}T00:00:00.000Z`);
+  const toDate = new Date(`${normalizedTo}T00:00:00.000Z`);
+  const days =
+    Math.floor((toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+  if (!Number.isFinite(days) || days < 1 || days > 366) {
+    return [] as string[];
+  }
+
+  const keys: string[] = [];
+  for (let i = 0; i < days; i += 1) {
+    const current = new Date(fromDate.getTime() + i * 24 * 60 * 60 * 1000);
+    keys.push(formatDateKeyUTC(current));
+  }
+
+  return keys;
+}
+
+function getTodayDateKeyUTC() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function getErrorCode(error: any) {
   return String(error?.code ?? "");
 }
@@ -275,7 +336,10 @@ async function getRestaurantName(restaurantId: string) {
   return data?.name ?? "Restaurant Reservation";
 }
 
-function mapRestaurantRow(row: any) {
+function mapRestaurantRow(
+  row: any,
+  owner?: { name: string | null; email: string | null } | null,
+) {
   return {
     id: row.id,
     name: row.name,
@@ -288,9 +352,83 @@ function mapRestaurantRow(row: any) {
     contactPhone: row.contact_phone ?? null,
     contactEmail: row.contact_email ?? null,
     ownerId: row.owner_id ?? null,
+    ownerName: owner?.name ?? null,
+    ownerEmail: owner?.email ?? null,
     totalTables: Number(row.total_tables ?? 1),
     createdAt: row.created_at ?? null,
   };
+}
+
+function displayNameFromIdentity(input: {
+  fullName?: string | null;
+  email?: string | null;
+  fallbackId?: string | null;
+}) {
+  const fullName = String(input.fullName ?? "").trim();
+  if (fullName) return fullName;
+
+  const email = String(input.email ?? "").trim();
+  if (email) return email;
+
+  return String(input.fallbackId ?? "Unknown");
+}
+
+async function getUserIdentityMap(userIds: string[]) {
+  const distinctIds = Array.from(
+    new Set(
+      userIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const map = new Map<
+    string,
+    { name: string; fullName: string | null; email: string | null }
+  >();
+  if (!distinctIds.length) return map;
+
+  const idSet = new Set(distinctIds);
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,full_name")
+    .in("id", distinctIds);
+
+  if (profilesError && !isUndefinedTableError(profilesError)) {
+    throw new Error(profilesError.message);
+  }
+
+  const fullNameById = new Map<string, string | null>();
+  for (const profile of profiles ?? []) {
+    fullNameById.set(String((profile as any).id), (profile as any).full_name ?? null);
+  }
+
+  const authUsersResult = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  const emailById = new Map<string, string | null>();
+  for (const authUser of authUsersResult.data?.users ?? []) {
+    const id = String(authUser.id ?? "");
+    if (!idSet.has(id)) continue;
+    emailById.set(id, String(authUser.email ?? "") || null);
+  }
+
+  for (const id of distinctIds) {
+    const fullName = fullNameById.get(id) ?? null;
+    const email = emailById.get(id) ?? null;
+    const name = displayNameFromIdentity({
+      fullName,
+      email,
+      fallbackId: id,
+    });
+
+    map.set(id, { name, fullName, email });
+  }
+
+  return map;
 }
 
 async function getUserRole(userId: string) {
@@ -331,6 +469,38 @@ async function ensureVendorRole(userId: string) {
   }
 
   return role;
+}
+
+async function ensureAdminRole(userId: string) {
+  const role = await getUserRole(userId);
+  const isAdmin = role === "admin";
+
+  if (!isAdmin) {
+    const error: any = new Error("Admin access required");
+    error.status = 403;
+    throw error;
+  }
+
+  return role;
+}
+
+async function writeAdminAuditLog(input: {
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  payload?: Record<string, unknown>;
+}) {
+  const { error } = await supabase.from("admin_audit_logs").insert({
+    actor_id: input.actorId,
+    action: input.action,
+    target_type: input.targetType,
+    target_id: input.targetId,
+    payload: input.payload ?? {},
+  });
+
+  if (error && isUndefinedTableError(error)) return;
+  if (error) throw new Error(error.message);
 }
 
 async function getOwnedRestaurantIds(userId: string) {
@@ -1778,31 +1948,639 @@ app.post(
   },
 );
 
+app.get("/admin/overview", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const [profilesResult, restaurantsCountResult, reservationsResult] = await Promise.all([
+      supabase.from("profiles").select("id,role"),
+      supabase.from("restaurants").select("id", { count: "exact", head: true }),
+      supabase
+        .from("reservations")
+        .select("id,status,payment_status,payment_amount", { count: "exact" }),
+    ]);
+
+    if (profilesResult.error) {
+      return res.status(500).json({ message: profilesResult.error.message });
+    }
+
+    if (restaurantsCountResult.error) {
+      return res.status(500).json({ message: restaurantsCountResult.error.message });
+    }
+
+    if (reservationsResult.error) {
+      return res.status(500).json({ message: reservationsResult.error.message });
+    }
+
+    const profiles = profilesResult.data ?? [];
+    const reservations = reservationsResult.data ?? [];
+
+    let vendors = 0;
+    let customers = 0;
+    let admins = 0;
+
+    for (const profile of profiles) {
+      const role = String((profile as any).role ?? "customer").toLowerCase();
+      if (role === "admin") {
+        admins += 1;
+      } else if (["vendor", "owner", "manager"].includes(role)) {
+        vendors += 1;
+      } else {
+        customers += 1;
+      }
+    }
+
+    let pendingReservations = 0;
+    let confirmedReservations = 0;
+    let completedReservations = 0;
+    let paidReservations = 0;
+    let totalPaidAmountMinor = 0;
+
+    for (const reservation of reservations) {
+      const status = normalizeReservationStatus((reservation as any).status);
+      const paymentStatus = normalizePaymentStatus((reservation as any).payment_status);
+
+      if (status === "pending") pendingReservations += 1;
+      if (status === "confirmed") confirmedReservations += 1;
+      if (status === "completed") completedReservations += 1;
+
+      if (paymentStatus === "paid") {
+        paidReservations += 1;
+        const amount = Number((reservation as any).payment_amount ?? 0);
+        if (Number.isFinite(amount) && amount > 0) {
+          totalPaidAmountMinor += amount;
+        }
+      }
+    }
+
+    return res.json({
+      users: profiles.length,
+      vendors,
+      customers,
+      admins,
+      restaurants: Number(restaurantsCountResult.count ?? 0),
+      reservations: Number(reservationsResult.count ?? reservations.length),
+      pendingReservations,
+      confirmedReservations,
+      completedReservations,
+      paidReservations,
+      totalPaidAmountMinor,
+    });
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin overview" });
+  }
+});
+
+app.get("/admin/charts", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const today = getTodayDateKeyUTC();
+    const to = normalizeDateString(req.query.to) ?? today;
+    const from = normalizeDateString(req.query.from) ?? shiftDateKey(to, -29);
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Invalid date range. Use YYYY-MM-DD." });
+    }
+
+    if (from > to) {
+      return res.status(400).json({ message: "Invalid range: from must be on or before to." });
+    }
+
+    const keys = createDateRangeKeys(from, to);
+    if (!keys.length) {
+      return res
+        .status(400)
+        .json({ message: "Date range must be between 1 and 366 days." });
+    }
+
+    const { data, error } = await supabase
+      .from("reservations")
+      .select("date,status,payment_status,payment_amount")
+      .gte("date", from)
+      .lte("date", to);
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    const dayMap = new Map<
+      string,
+      {
+        date: string;
+        total: number;
+        completed: number;
+        cancelled: number;
+        pending: number;
+        confirmed: number;
+        paid: number;
+        revenueMinor: number;
+      }
+    >();
+
+    for (const key of keys) {
+      dayMap.set(key, {
+        date: key,
+        total: 0,
+        completed: 0,
+        cancelled: 0,
+        pending: 0,
+        confirmed: 0,
+        paid: 0,
+        revenueMinor: 0,
+      });
+    }
+
+    for (const row of data ?? []) {
+      const dateKey = normalizeDateString((row as any).date);
+      if (!dateKey) continue;
+
+      const bucket = dayMap.get(dateKey);
+      if (!bucket) continue;
+
+      bucket.total += 1;
+
+      const status = normalizeReservationStatus((row as any).status);
+      if (status === "completed") bucket.completed += 1;
+      if (status === "cancelled" || status === "declined") bucket.cancelled += 1;
+      if (status === "pending") bucket.pending += 1;
+      if (status === "confirmed") bucket.confirmed += 1;
+
+      const paymentStatus = normalizePaymentStatus((row as any).payment_status);
+      if (paymentStatus === "paid") {
+        bucket.paid += 1;
+
+        const amount = Number((row as any).payment_amount ?? 0);
+        if (Number.isFinite(amount) && amount > 0) {
+          bucket.revenueMinor += amount;
+        }
+      }
+    }
+
+    const days = keys.map((key) => dayMap.get(key)!);
+
+    const summaryBase = days.reduce(
+      (acc, day) => {
+        acc.totalReservations += day.total;
+        acc.totalCompleted += day.completed;
+        acc.totalCancelled += day.cancelled;
+        acc.totalPaid += day.paid;
+        acc.totalRevenueMinor += day.revenueMinor;
+        return acc;
+      },
+      {
+        totalReservations: 0,
+        totalCompleted: 0,
+        totalCancelled: 0,
+        totalPaid: 0,
+        totalRevenueMinor: 0,
+      },
+    );
+
+    const completionRate =
+      summaryBase.totalReservations > 0
+        ? Number(
+            ((summaryBase.totalCompleted / summaryBase.totalReservations) * 100).toFixed(2),
+          )
+        : 0;
+
+    const cancellationRate =
+      summaryBase.totalReservations > 0
+        ? Number(
+            ((summaryBase.totalCancelled / summaryBase.totalReservations) * 100).toFixed(2),
+          )
+        : 0;
+
+    return res.json({
+      from,
+      to,
+      days,
+      summary: {
+        ...summaryBase,
+        completionRate,
+        cancellationRate,
+      },
+    });
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin charts" });
+  }
+});
+
+app.get("/admin/users", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const search = String(req.query.search ?? "").trim();
+    const roleFilter = String(req.query.role ?? "").trim().toLowerCase();
+    const limit = parsePositiveInt(req.query.limit, 50, 1, 200);
+    const offset = Math.max(0, parsePositiveInt(req.query.offset, 0, 0, 100000));
+
+    let query = supabase
+      .from("profiles")
+      .select("id,role,full_name,created_at")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (roleFilter && roleFilter !== "all") {
+      query = query.eq("role", roleFilter);
+    }
+
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%`);
+    }
+
+    const { data: profiles, error: profilesError } = await query;
+
+    if (profilesError) {
+      return res.status(500).json({ message: profilesError.message });
+    }
+
+    const authUsersResult = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    const users = authUsersResult.data?.users ?? [];
+    const emailById = new Map<string, string>();
+
+    for (const authUser of users) {
+      emailById.set(String(authUser.id), String(authUser.email ?? ""));
+    }
+
+    const mapped = (profiles ?? []).map((profile: any) => ({
+      id: profile.id,
+      role: String(profile.role ?? "customer"),
+      fullName: profile.full_name ?? null,
+      createdAt: profile.created_at ?? null,
+      email: emailById.get(String(profile.id)) ?? null,
+    }));
+
+    return res.json(mapped);
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin users" });
+  }
+});
+
+app.patch("/admin/users/:targetUserId/role", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+  const targetUserId = String(req.params.targetUserId ?? "").trim();
+
+  try {
+    await ensureAdminRole(actorId);
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "targetUserId is required" });
+    }
+
+    const nextRoleRaw = String(req.body?.role ?? "").trim().toLowerCase();
+    const nextRole = ["customer", "vendor", "admin"].includes(nextRoleRaw)
+      ? nextRoleRaw
+      : null;
+
+    if (!nextRole) {
+      return res.status(400).json({ message: "role must be customer, vendor, or admin" });
+    }
+
+    const { error: profileUpdateError } = await supabase.from("profiles").upsert(
+      {
+        id: targetUserId,
+        role: nextRole,
+      },
+      {
+        onConflict: "id",
+      },
+    );
+
+    if (profileUpdateError) {
+      return res.status(500).json({ message: profileUpdateError.message });
+    }
+
+    const currentAuth = await supabase.auth.admin.getUserById(targetUserId);
+    if (!currentAuth.error && currentAuth.data?.user) {
+      const existingMetadata = (currentAuth.data.user.user_metadata ?? {}) as Record<string, unknown>;
+      const mergedMetadata = {
+        ...existingMetadata,
+        role: nextRole,
+      };
+
+      const metadataUpdate = await supabase.auth.admin.updateUserById(targetUserId, {
+        user_metadata: mergedMetadata,
+      });
+
+      if (metadataUpdate.error) {
+        return res.status(500).json({ message: metadataUpdate.error.message });
+      }
+    }
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "user_role_update",
+      targetType: "user",
+      targetId: targetUserId,
+      payload: {
+        role: nextRole,
+      },
+    });
+
+    return res.json({
+      ok: true,
+      targetUserId,
+      role: nextRole,
+    });
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to update user role" });
+  }
+});
+
+app.get("/admin/restaurants", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const search = String(req.query.search ?? "").trim();
+    const ownerId = String(req.query.ownerId ?? "").trim();
+    const limit = parsePositiveInt(req.query.limit, 50, 1, 200);
+    const offset = Math.max(0, parsePositiveInt(req.query.offset, 0, 0, 100000));
+
+    let query = supabase
+      .from("restaurants")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (ownerId) {
+      query = query.eq("owner_id", ownerId);
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,cuisine.ilike.%${search}%,location.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    const rows = (data ?? []) as any[];
+    const ownerIds = rows
+      .map((row) => String(row.owner_id ?? "").trim())
+      .filter(Boolean);
+    const ownerMap = await getUserIdentityMap(ownerIds);
+
+    return res.json(
+      rows.map((row) =>
+        mapRestaurantRow(
+          row,
+          row.owner_id ? ownerMap.get(String(row.owner_id)) ?? null : null,
+        ),
+      ),
+    );
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin restaurants" });
+  }
+});
+
+app.get("/admin/reservations", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const statusFilter = String(req.query.status ?? "").trim().toLowerCase();
+    const paymentStatusFilter = String(req.query.paymentStatus ?? "").trim().toLowerCase();
+    const restaurantId = String(req.query.restaurantId ?? "").trim();
+    const dateFilter = String(req.query.date ?? "").trim();
+    const limit = parsePositiveInt(req.query.limit, 80, 1, 300);
+    const offset = Math.max(0, parsePositiveInt(req.query.offset, 0, 0, 100000));
+
+    let query = supabase
+      .from("reservations")
+      .select(
+        "id,restaurant_id,user_id,name,phone,date,time,guests,status,created_at,payment_status,payment_amount,payment_provider,payment_paid_at,payment_reference,reviewed_by,reviewed_at,decline_reason",
+      )
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (statusFilter && statusFilter !== "all") {
+      query = query.eq("status", statusFilter);
+    }
+
+    if (paymentStatusFilter && paymentStatusFilter !== "all") {
+      query = query.eq("payment_status", paymentStatusFilter);
+    }
+
+    if (restaurantId) {
+      query = query.eq("restaurant_id", restaurantId);
+    }
+
+    if (dateFilter) {
+      query = query.eq("date", dateFilter);
+    }
+
+    const { data, error } = await query;
+
+    const enrichRowsWithNames = async (rows: any[]) => {
+      const normalizedRows = rows.map((row) => ({
+        ...row,
+        time: normalizeTime(row.time) ?? String(row.time ?? "").slice(0, 5),
+      }));
+
+      const restaurantIds = Array.from(
+        new Set(
+          normalizedRows
+            .map((row) => String(row.restaurant_id ?? "").trim())
+            .filter(Boolean),
+        ),
+      );
+
+      const userIds = Array.from(
+        new Set(
+          normalizedRows
+            .map((row) => String(row.user_id ?? "").trim())
+            .filter(Boolean),
+        ),
+      );
+
+      const restaurantNameById = new Map<string, string>();
+      if (restaurantIds.length > 0) {
+        const restaurantsLookup = await supabase
+          .from("restaurants")
+          .select("id,name")
+          .in("id", restaurantIds);
+
+        if (!restaurantsLookup.error) {
+          for (const row of restaurantsLookup.data ?? []) {
+            restaurantNameById.set(String((row as any).id), String((row as any).name ?? ""));
+          }
+        }
+      }
+
+      const userIdentityById = await getUserIdentityMap(userIds);
+
+      return normalizedRows.map((row) => {
+        const restaurantId = String(row.restaurant_id ?? "");
+        const userId = String(row.user_id ?? "");
+        const userIdentity = userIdentityById.get(userId);
+
+        return {
+          ...row,
+          restaurant_name: restaurantNameById.get(restaurantId) ?? restaurantId,
+          user_name: userIdentity?.name ?? userId,
+          user_email: userIdentity?.email ?? null,
+        };
+      });
+    };
+
+    if (error && isUndefinedColumnError(error)) {
+      const fallback = await supabase
+        .from("reservations")
+        .select(
+          "id,restaurant_id,user_id,name,phone,date,time,guests,status,created_at,payment_status,payment_amount,payment_provider,payment_paid_at,payment_reference",
+        )
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (fallback.error) {
+        return res.status(500).json({ message: fallback.error.message });
+      }
+
+      const rows = (fallback.data ?? []).map((row: any) => ({
+        ...row,
+        reviewed_by: null,
+        reviewed_at: null,
+        decline_reason: null,
+      }));
+
+      return res.json(await enrichRowsWithNames(rows));
+    }
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    return res.json(await enrichRowsWithNames((data ?? []) as any[]));
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin reservations" });
+  }
+});
+
+app.patch("/admin/reservations/:reservationId/status", requireUser, async (req: any, res) => {
+  const actorId = req.user.id;
+  const reservationId = String(req.params.reservationId ?? "").trim();
+
+  try {
+    await ensureAdminRole(actorId);
+
+    if (!reservationId) {
+      return res.status(400).json({ message: "reservationId is required" });
+    }
+
+    const nextStatusRaw = String(req.body?.status ?? "").trim().toLowerCase();
+    const nextStatus = ["pending", "confirmed", "declined", "cancelled", "completed"].includes(nextStatusRaw)
+      ? nextStatusRaw
+      : null;
+
+    if (!nextStatus) {
+      return res.status(400).json({ message: "Invalid reservation status" });
+    }
+
+    const reason = String(req.body?.reason ?? "").trim();
+    const payload: Record<string, unknown> = {
+      status: nextStatus,
+      reviewed_by: actorId,
+      reviewed_at: new Date().toISOString(),
+      decline_reason: nextStatus === "declined" ? reason || "Declined by admin" : null,
+    };
+
+    let updateResult = await supabase
+      .from("reservations")
+      .update(payload)
+      .eq("id", reservationId)
+      .select("*")
+      .single();
+
+    if (updateResult.error && isUndefinedColumnError(updateResult.error)) {
+      updateResult = await supabase
+        .from("reservations")
+        .update({ status: nextStatus })
+        .eq("id", reservationId)
+        .select("*")
+        .single();
+    }
+
+    if (updateResult.error) {
+      return res.status(500).json({ message: updateResult.error.message });
+    }
+
+    await writeAdminAuditLog({
+      actorId,
+      action: "reservation_status_update",
+      targetType: "reservation",
+      targetId: reservationId,
+      payload: {
+        status: nextStatus,
+        reason: reason || null,
+      },
+    });
+
+    return res.json({
+      reservation: {
+        ...(updateResult.data as any),
+        time: String((updateResult.data as any).time).slice(0, 5),
+      },
+      message: "Reservation status updated.",
+    });
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to update reservation status" });
+  }
+});
+
+app.get("/admin/audit-logs", requireUser, async (req: any, res) => {
+  const userId = req.user.id;
+
+  try {
+    await ensureAdminRole(userId);
+
+    const limit = parsePositiveInt(req.query.limit, 60, 1, 300);
+
+    const { data, error } = await supabase
+      .from("admin_audit_logs")
+      .select("id,actor_id,action,target_type,target_id,payload,created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error && isUndefinedTableError(error)) {
+      return res.json([]);
+    }
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    return res.json(data ?? []);
+  } catch (error: any) {
+    const status = Number(error?.status ?? 500);
+    return res.status(status).json({ message: error?.message ?? "Failed to load admin audit logs" });
+  }
+});
+
 const PORT = Number(process.env.PORT ?? 4000);
 
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

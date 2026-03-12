@@ -3,7 +3,7 @@ import { supabase } from "../supabase";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-type RequestOptions = {
+export type RequestOptions = {
   method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
