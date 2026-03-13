@@ -409,7 +409,7 @@ export default function VendorRestaurantsPage() {
 
   if (authLoading) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="inline-flex items-center gap-2 text-[#5b6374]">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -422,7 +422,7 @@ export default function VendorRestaurantsPage() {
 
   if (!isAuthed) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
             Login is required to access vendor restaurants.
@@ -433,7 +433,7 @@ export default function VendorRestaurantsPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
       <div className="mx-auto max-w-6xl px-6 py-8">
         <header>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b3d4a]">
@@ -595,3 +595,5 @@ export default function VendorRestaurantsPage() {
     </div>
   );
 }
+
+

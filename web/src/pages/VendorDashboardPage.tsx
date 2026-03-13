@@ -197,10 +197,10 @@ function VendorLineChart({ points }: { points: TrendPoint[] }) {
           </linearGradient>
         </defs>
 
-        {chart.tickValues.map((tick) => {
+        {chart.tickValues.map((tick, tickIndex) => {
           const y = chart.baselineY - (tick / chart.maxValue) * chart.innerH;
           return (
-            <g key={`tick-${tick}`}>
+            <g key={`tick-${tick}-${tickIndex}`}>
               <line x1={padX} x2={width - padX} y1={y} y2={y} stroke="rgba(100,116,139,0.2)" strokeDasharray="4 5" />
               <text x={10} y={y + 4} fontSize="11" fill="rgba(71,85,105,0.7)">{tick}</text>
             </g>
@@ -390,19 +390,19 @@ export default function VendorDashboardPage() {
   }
 
   if (authLoading) {
-    return <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]" />;
+    return <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]" />;
   }
 
   if (!isAuthed) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">Login is required to access the vendor portal.</div>
       </div>
     );
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
       <div className="mx-auto max-w-6xl px-6 py-8">
         <header>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b3d4a]">Vendor Portal</p>
@@ -524,9 +524,5 @@ export default function VendorDashboardPage() {
     </div>
   );
 }
-
-
-
-
 
 

@@ -184,7 +184,7 @@ export default function RestaurantDetailsPage() {
 
   if (loadingRestaurant) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
         <div className="pointer-events-none absolute -left-20 -top-16 h-64 w-64 rounded-full bg-[#f2dde2] blur-3xl" />
         <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-[#f8ecee] blur-3xl" />
 
@@ -230,7 +230,7 @@ export default function RestaurantDetailsPage() {
 
   if (!data) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-10">
           <div className="rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] px-4 py-3 text-sm text-[#9f1239]">
             {msg ?? "Unable to load restaurant details."}
@@ -241,7 +241,7 @@ export default function RestaurantDetailsPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
       <div className="relative h-[380px] overflow-hidden sm:h-[420px]">
         <img
           src={heroUrl}
@@ -620,3 +620,5 @@ export default function RestaurantDetailsPage() {
     </div>
   );
 }
+
+

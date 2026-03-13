@@ -41,7 +41,7 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         }
       }}
       className="
-        group overflow-hidden rounded-2xl
+        group w-full min-w-0 max-w-full overflow-hidden rounded-2xl
         border border-[#e8e2e3]
         bg-white
         shadow-[0_14px_34px_rgba(15,23,42,0.08)]
@@ -62,23 +62,23 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#2a1518]/58 via-[#2a1518]/14 to-transparent" />
 
-        <div className="absolute bottom-3 left-3 flex items-center gap-2">
+        <div className="absolute bottom-3 left-3 flex min-w-0 max-w-[calc(100%-1.5rem)] items-center gap-2">
           <RatingBadge value={r.rating} />
-          <span className="rounded-full border border-[#eadde1] bg-[rgba(91,42,49,0.72)] px-2.5 py-1 text-[11px] text-white/95 backdrop-blur">
+          <span className="min-w-0 max-w-full truncate rounded-full border border-[#eadde1] bg-[rgba(91,42,49,0.72)] px-2.5 py-1 text-[11px] text-white/95 backdrop-blur">
             {r.cuisine}
           </span>
         </div>
 
-        <div className="absolute right-3 top-3 rounded-full border border-[#eadde1] bg-[rgba(91,42,49,0.72)] px-2.5 py-1 text-[11px] text-white/95 backdrop-blur">
+        <div className="absolute right-3 top-3 min-w-0 max-w-full truncate rounded-full border border-[#eadde1] bg-[rgba(91,42,49,0.72)] px-2.5 py-1 text-[11px] text-white/95 backdrop-blur">
           {price(r.priceLevel)}
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <h3 className="truncate text-[19px] font-semibold text-[#1f2937]">{r.name}</h3>
-            <p className="mt-1 truncate text-sm text-[#6b7280]">{r.location}</p>
+            <p className="mt-1 w-full truncate text-sm text-[#6b7280]">{r.location}</p>
           </div>
         </div>
 
@@ -102,3 +102,4 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
     </div>
   );
 }
+
