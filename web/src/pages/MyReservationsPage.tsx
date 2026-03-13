@@ -172,7 +172,7 @@ export default function MyReservationsPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative w-full bg-[#f3f3f4] text-[#1f2937]">
       <section className="mx-auto max-w-5xl px-6 py-8 sm:py-10">
         <button
           onClick={() => navigate(-1)}
@@ -422,5 +422,4 @@ export default function MyReservationsPage() {
     </div>
   );
 }
-
 

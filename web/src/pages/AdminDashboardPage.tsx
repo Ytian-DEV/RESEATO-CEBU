@@ -80,6 +80,40 @@ function shortId(value: string) {
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
   }
 
+function toLabel(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "-";
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+  }
+
+function reservationStatusTone(status: string | null | undefined) {
+  const normalized = String(status ?? "").toLowerCase();
+  if (normalized === "confirmed") return "border-[#d2f5e6] bg-[#ecfcf4] text-[#047857]";
+  if (normalized === "completed") return "border-[#cae6ff] bg-[#edf7ff] text-[#1d4ed8]";
+  if (normalized === "pending") return "border-[#fee4bf] bg-[#fff4df] text-[#b45309]";
+  if (normalized === "declined" || normalized === "cancelled") {
+    return "border-[#f7d3d7] bg-[#fff1f2] text-[#be123c]";
+  }
+  return "border-[#e4e7ec] bg-[#f8fafc] text-[#475467]";
+  }
+
+function paymentStatusTone(status: string | null | undefined) {
+  const normalized = String(status ?? "").toLowerCase();
+  if (normalized === "paid") return "border-[#d2f5e6] bg-[#ecfcf4] text-[#047857]";
+  if (normalized === "processing") return "border-[#cae6ff] bg-[#edf7ff] text-[#1d4ed8]";
+  if (normalized === "failed" || normalized === "cancelled") {
+    return "border-[#f7d3d7] bg-[#fff1f2] text-[#be123c]";
+  }
+  return "border-[#fee4bf] bg-[#fff4df] text-[#b45309]";
+  }
+
+function userRoleTone(role: string | null | undefined) {
+  const normalized = String(role ?? "").toLowerCase();
+  if (normalized === "admin") return "border-[#f7d3d7] bg-[#fff1f2] text-[#be123c]";
+  if (normalized === "vendor") return "border-[#d7e6ff] bg-[#eff6ff] text-[#1d4ed8]";
+  return "border-[#d2f5e6] bg-[#ecfcf4] text-[#047857]";
+  }
+
 function isValidDateKey(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -867,18 +901,18 @@ export default function AdminDashboardPage() {
         <section className={`mt-5 ${panelClass}`}>
           <h2 className="text-3xl text-[#1f2937]">User Management</h2>
 
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
             <input
               value={userSearch}
               onChange={(event) => setUserSearch(event.target.value)}
               placeholder="Search by full name"
-              className={inputClass}
+              className={`${inputClass} w-full sm:w-auto`}
             />
 
             <select
               value={userRoleFilter}
               onChange={(event) => setUserRoleFilter(event.target.value)}
-              className={selectClass}
+              className={`${selectClass} w-full sm:w-auto`}
             >
               <option value="all">All roles</option>
               <option value="customer">Customer</option>
@@ -886,63 +920,132 @@ export default function AdminDashboardPage() {
               <option value="admin">Admin</option>
             </select>
 
-            <button type="button" onClick={loadUsers} className={ghostButtonClass}>
+            <button type="button" onClick={loadUsers} className={`${ghostButtonClass} w-full sm:w-auto`}>
               Apply
             </button>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm text-[#374151]">
-              <thead>
-                <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
-                  <th className="py-2 pr-3">User</th>
-                  <th className="py-2 pr-3">Email</th>
-                  <th className="py-2 pr-3">Role</th>
-                  <th className="py-2 pr-3">Joined</th>
-                  <th className="py-2 pr-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((item) => (
-                  <tr key={item.id} className="border-b border-[#f1f5f9]">
-                    <td className="py-2 pr-3">
-                      <span className="inline-flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                        {item.fullName || shortId(item.id)}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.email || "-"}</td>
-                    <td className="py-2 pr-3">
-                      <select
-                        value={roleDraftByUserId[item.id] ?? item.role}
-                        onChange={(event) =>
-                          setRoleDraftByUserId((prev) => ({
-                            ...prev,
-                            [item.id]: event.target.value,
-                          }))
-                        }
-                        className={`${selectClass} rounded-lg px-2 py-1 text-xs`}
-                      >
-                        <option value="customer">customer</option>
-                        <option value="vendor">vendor</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    </td>
-                    <td className="py-2 pr-3 text-[#667085]">{toDateTime(item.createdAt)}</td>
-                    <td className="py-2 pr-3">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateUserRole(item.id)}
-                        disabled={updatingUserId === item.id}
-                        className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
-                      >
-                        {updatingUserId === item.id ? "Saving..." : "Update"}
-                      </button>
-                    </td>
+          <div className="mt-4 space-y-3 md:hidden">
+            {users.length === 0 ? (
+              <div className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] px-4 py-6 text-center text-sm text-[#667085]">
+                No users found.
+              </div>
+            ) : (
+              users.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-[#1f2937]">{item.fullName || shortId(item.id)}</h3>
+                      <p className="mt-0.5 break-words text-xs text-[#667085]">{item.email || "-"}</p>
+                      <p className="mt-1 text-[11px] text-[#98a2b3]">Joined {toDateTime(item.createdAt)}</p>
+                    </div>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${userRoleTone(
+                        item.role,
+                      )}`}
+                    >
+                      {toLabel(item.role)}
+                    </span>
+                  </div>
+
+                  <label className="mt-3 block">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">
+                      Account role
+                    </span>
+                    <select
+                      value={roleDraftByUserId[item.id] ?? item.role}
+                      onChange={(event) =>
+                        setRoleDraftByUserId((prev) => ({
+                          ...prev,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                      className={`${selectClass} mt-1 h-10 w-full text-sm`}
+                    >
+                      <option value="customer">customer</option>
+                      <option value="vendor">vendor</option>
+                      <option value="admin">admin</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateUserRole(item.id)}
+                    disabled={updatingUserId === item.id}
+                    className="mt-3 w-full rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                  >
+                    {updatingUserId === item.id ? "Saving..." : "Update role"}
+                  </button>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white">
+              <table className="min-w-[760px] text-sm text-[#374151]">
+                <thead className="bg-[#f8fafc]">
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
+                    <th className="px-3 py-2.5">User</th>
+                    <th className="px-3 py-2.5">Email</th>
+                    <th className="px-3 py-2.5">Role</th>
+                    <th className="px-3 py-2.5">Joined</th>
+                    <th className="px-3 py-2.5">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-[#8b97a8]">
+                        No users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((item) => (
+                      <tr key={item.id} className="border-b border-[#f1f5f9] transition hover:bg-[#fcfdff]">
+                        <td className="px-3 py-3">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                            <span className="font-medium text-[#1f2937]">{item.fullName || shortId(item.id)}</span>
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-[#475467]">{item.email || "-"}</td>
+                        <td className="px-3 py-3">
+                          <select
+                            value={roleDraftByUserId[item.id] ?? item.role}
+                            onChange={(event) =>
+                              setRoleDraftByUserId((prev) => ({
+                                ...prev,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            className={`${selectClass} rounded-lg px-2 py-1 text-xs`}
+                          >
+                            <option value="customer">customer</option>
+                            <option value="vendor">vendor</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-3 text-[#667085]">{toDateTime(item.createdAt)}</td>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateUserRole(item.id)}
+                            disabled={updatingUserId === item.id}
+                            className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                          >
+                            {updatingUserId === item.id ? "Saving..." : "Update"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}
@@ -1102,85 +1205,169 @@ export default function AdminDashboardPage() {
               <div className="text-xs text-[#8b97a8]">Assign restaurant owners from vendor accounts</div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
               <input
                 value={restaurantSearch}
                 onChange={(event) => setRestaurantSearch(event.target.value)}
                 placeholder="Search restaurant name/cuisine/location"
-                className={`${inputClass} w-[340px]`}
+                className={`${inputClass} w-full sm:w-[340px]`}
               />
-              <button type="button" onClick={loadRestaurants} className={ghostButtonClass}>
+              <button type="button" onClick={loadRestaurants} className={`${ghostButtonClass} w-full sm:w-auto`}>
                 Apply
               </button>
             </div>
 
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm text-[#374151]">
-                <thead>
-                  <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
-                    <th className="py-2 pr-3">Restaurant</th>
-                    <th className="py-2 pr-3">Owner</th>
-                    <th className="py-2 pr-3">Assign Vendor</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Tables</th>
-                    <th className="py-2 pr-3">Rating</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {restaurants.map((item) => (
-                    <tr key={item.id} className="border-b border-[#f1f5f9]">
-                      <td className="py-2 pr-3">
-                        <div className="font-semibold text-[#1f2937]">{item.name}</div>
-                        <div className="text-xs text-[#8b97a8]">
+            <div className="mt-4 space-y-3 md:hidden">
+              {restaurants.length === 0 ? (
+                <div className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] px-4 py-6 text-center text-sm text-[#667085]">
+                  No restaurants found.
+                </div>
+              ) : (
+                restaurants.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-[#1f2937]">{item.name}</h3>
+                        <p className="mt-1 break-words text-xs text-[#667085]">
                           {item.cuisine} | {item.location}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        Active
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                        <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Owner</div>
+                        <div className="mt-1 break-words text-xs font-medium text-[#344054]">
+                          {item.ownerName || item.ownerEmail || (item.ownerId ? shortId(item.ownerId) : "-")}
                         </div>
-                      </td>
-                      <td className="py-2 pr-3 text-[#475467]">
-                        {item.ownerName || item.ownerEmail || (item.ownerId ? shortId(item.ownerId) : "-")}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <div className="flex min-w-[280px] items-center gap-2">
-                          <select
-                            value={ownerDraftByRestaurantId[item.id] ?? item.ownerId ?? ""}
-                            onChange={(event) =>
-                              setOwnerDraftByRestaurantId((prev) => ({
-                                ...prev,
-                                [item.id]: event.target.value,
-                              }))
-                            }
-                            className={`${selectClass} min-w-[190px] rounded-lg px-2 py-1 text-xs`}
-                          >
-                            <option value="">Unassigned</option>
-                            {assignableVendors.map((vendor) => (
-                              <option key={vendor.id} value={vendor.id}>
-                                {(vendor.fullName || vendor.email || shortId(vendor.id)) +
-                                  " (" +
-                                  vendor.role +
-                                  ")"}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => handleAssignRestaurantOwner(item.id)}
-                            disabled={assigningRestaurantId === item.id}
-                            className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
-                          >
-                            {assigningRestaurantId === item.id ? "Saving..." : "Save"}
-                          </button>
+                      </div>
+                      <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                        <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Performance</div>
+                        <div className="mt-1 text-xs font-medium text-[#344054]">
+                          {item.totalTables} tables | {item.rating.toFixed(1)} rating
                         </div>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                          Active
-                        </span>
-                      </td>
-                      <td className="py-2 pr-3 text-[#475467]">{item.totalTables}</td>
-                      <td className="py-2 pr-3 text-[#475467]">{item.rating.toFixed(1)}</td>
+                      </div>
+                    </div>
+
+                    <label className="mt-3 block">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">
+                        Assign vendor
+                      </span>
+                      <select
+                        value={ownerDraftByRestaurantId[item.id] ?? item.ownerId ?? ""}
+                        onChange={(event) =>
+                          setOwnerDraftByRestaurantId((prev) => ({
+                            ...prev,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                        className={`${selectClass} mt-1 h-10 w-full text-xs`}
+                      >
+                        <option value="">Unassigned</option>
+                        {assignableVendors.map((vendor) => (
+                          <option key={vendor.id} value={vendor.id}>
+                            {(vendor.fullName || vendor.email || shortId(vendor.id)) + " (" + vendor.role + ")"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAssignRestaurantOwner(item.id)}
+                      disabled={assigningRestaurantId === item.id}
+                      className="mt-3 w-full rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                    >
+                      {assigningRestaurantId === item.id ? "Saving..." : "Save assignment"}
+                    </button>
+                  </article>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white">
+                <table className="min-w-[860px] text-sm text-[#374151]">
+                  <thead className="bg-[#f8fafc]">
+                    <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
+                      <th className="px-3 py-2.5">Restaurant</th>
+                      <th className="px-3 py-2.5">Owner</th>
+                      <th className="px-3 py-2.5">Assign Vendor</th>
+                      <th className="px-3 py-2.5">Status</th>
+                      <th className="px-3 py-2.5">Tables</th>
+                      <th className="px-3 py-2.5">Rating</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {restaurants.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-[#8b97a8]">
+                          No restaurants found.
+                        </td>
+                      </tr>
+                    ) : (
+                      restaurants.map((item) => (
+                        <tr key={item.id} className="border-b border-[#f1f5f9] align-top transition hover:bg-[#fcfdff]">
+                          <td className="px-3 py-3">
+                            <div className="font-semibold text-[#1f2937]">{item.name}</div>
+                            <div className="mt-0.5 text-xs text-[#8b97a8]">
+                              {item.cuisine} | {item.location}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-[#475467]">
+                            {item.ownerName || item.ownerEmail || (item.ownerId ? shortId(item.ownerId) : "-")}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex min-w-[280px] items-center gap-2">
+                              <select
+                                value={ownerDraftByRestaurantId[item.id] ?? item.ownerId ?? ""}
+                                onChange={(event) =>
+                                  setOwnerDraftByRestaurantId((prev) => ({
+                                    ...prev,
+                                    [item.id]: event.target.value,
+                                  }))
+                                }
+                                className={`${selectClass} min-w-[190px] rounded-lg px-2 py-1 text-xs`}
+                              >
+                                <option value="">Unassigned</option>
+                                {assignableVendors.map((vendor) => (
+                                  <option key={vendor.id} value={vendor.id}>
+                                    {(vendor.fullName || vendor.email || shortId(vendor.id)) +
+                                      " (" +
+                                      vendor.role +
+                                      ")"}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handleAssignRestaurantOwner(item.id)}
+                                disabled={assigningRestaurantId === item.id}
+                                className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                              >
+                                {assigningRestaurantId === item.id ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                              Active
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-[#475467]">{item.totalTables}</td>
+                          <td className="px-3 py-3 text-[#475467]">{item.rating.toFixed(1)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </article>
         </section>
@@ -1189,11 +1376,11 @@ export default function AdminDashboardPage() {
         <section className={`mt-5 ${panelClass}`}>
           <h2 className="text-3xl text-[#1f2937]">All Reservations</h2>
 
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
             <select
               value={reservationStatusFilter}
               onChange={(event) => setReservationStatusFilter(event.target.value)}
-              className={selectClass}
+              className={`${selectClass} w-full sm:w-auto`}
             >
               <option value="all">All statuses</option>
               <option value="pending">pending</option>
@@ -1206,7 +1393,7 @@ export default function AdminDashboardPage() {
             <select
               value={reservationPaymentFilter}
               onChange={(event) => setReservationPaymentFilter(event.target.value)}
-              className={selectClass}
+              className={`${selectClass} w-full sm:w-auto`}
             >
               <option value="all">All payment</option>
               <option value="unpaid">unpaid</option>
@@ -1220,38 +1407,78 @@ export default function AdminDashboardPage() {
               type="date"
               value={reservationDateFilter}
               onChange={(event) => setReservationDateFilter(event.target.value)}
-              className={inputClass}
+              className={`${inputClass} w-full sm:w-auto`}
             />
 
-            <button type="button" onClick={loadReservations} className={ghostButtonClass}>
+            <button type="button" onClick={loadReservations} className={`${ghostButtonClass} w-full sm:w-auto`}>
               Apply Filters
             </button>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm text-[#374151]">
-              <thead>
-                <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
-                  <th className="py-2 pr-3">ID</th>
-                  <th className="py-2 pr-3">User</th>
-                  <th className="py-2 pr-3">Restaurant</th>
-                  <th className="py-2 pr-3">Date/Time</th>
-                  <th className="py-2 pr-3">Guests</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Payment</th>
-                  <th className="py-2 pr-3">Amount</th>
-                  <th className="py-2 pr-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservations.map((item) => (
-                  <tr key={item.id} className="border-b border-[#f1f5f9]">
-                    <td className="py-2 pr-3 text-[#667085]">{shortId(item.id)}</td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.user_name || item.user_email || shortId(item.user_id)}</td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.restaurant_name || shortId(item.restaurant_id)}</td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.date} {item.time}</td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.guests}</td>
-                    <td className="py-2 pr-3">
+          <div className="mt-4 space-y-3 md:hidden">
+            {reservations.length === 0 ? (
+              <div className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] px-4 py-6 text-center text-sm text-[#667085]">
+                No reservations found.
+              </div>
+            ) : (
+              reservations.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] uppercase tracking-wide text-[#8b97a8]">{shortId(item.id)}</div>
+                      <div className="mt-1 text-sm font-semibold text-[#1f2937]">
+                        {item.restaurant_name || shortId(item.restaurant_id)}
+                      </div>
+                      <div className="mt-0.5 break-words text-xs text-[#667085]">
+                        {item.user_name || item.user_email || shortId(item.user_id)}
+                      </div>
+                    </div>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${reservationStatusTone(
+                        item.status,
+                      )}`}
+                    >
+                      {toLabel(item.status)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Date/Time</div>
+                      <div className="mt-1 text-xs font-medium text-[#344054]">
+                        {item.date} {item.time}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Guests</div>
+                      <div className="mt-1 text-xs font-medium text-[#344054]">{item.guests}</div>
+                    </div>
+                    <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Payment</div>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${paymentStatusTone(
+                            item.payment_status || "unpaid",
+                          )}`}
+                        >
+                          {toLabel(item.payment_status || "unpaid")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Amount</div>
+                      <div className="mt-1 text-xs font-semibold text-[#7b2f3b]">{toPeso(item.payment_amount ?? 0)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-2">
+                    <label className="space-y-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7d8798]">
+                        Update status
+                      </span>
                       <select
                         value={statusDraftByReservationId[item.id] ?? item.status}
                         onChange={(event) =>
@@ -1260,7 +1487,7 @@ export default function AdminDashboardPage() {
                             [item.id]: event.target.value,
                           }))
                         }
-                        className={`${selectClass} rounded-lg px-2 py-1 text-xs`}
+                        className={`${selectClass} h-10 w-full text-sm`}
                       >
                         <option value="pending">pending</option>
                         <option value="confirmed">confirmed</option>
@@ -1268,23 +1495,101 @@ export default function AdminDashboardPage() {
                         <option value="cancelled">cancelled</option>
                         <option value="completed">completed</option>
                       </select>
-                    </td>
-                    <td className="py-2 pr-3 text-[#475467]">{item.payment_status || "unpaid"}</td>
-                    <td className="py-2 pr-3 text-[#475467]">{toPeso(item.payment_amount ?? 0)}</td>
-                    <td className="py-2 pr-3">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateReservationStatus(item.id)}
-                        disabled={updatingReservationId === item.id}
-                        className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
-                      >
-                        {updatingReservationId === item.id ? "Saving..." : "Update"}
-                      </button>
-                    </td>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateReservationStatus(item.id)}
+                      disabled={updatingReservationId === item.id}
+                      className="w-full rounded-xl border border-[#d9c3c8] bg-[#f8ecee] px-3 py-2 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                    >
+                      {updatingReservationId === item.id ? "Saving..." : "Update reservation"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white">
+              <table className="min-w-[980px] text-sm text-[#374151]">
+                <thead className="bg-[#f8fafc]">
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
+                    <th className="px-3 py-2.5">ID</th>
+                    <th className="px-3 py-2.5">User</th>
+                    <th className="px-3 py-2.5">Restaurant</th>
+                    <th className="px-3 py-2.5">Date/Time</th>
+                    <th className="px-3 py-2.5">Guests</th>
+                    <th className="px-3 py-2.5">Status</th>
+                    <th className="px-3 py-2.5">Payment</th>
+                    <th className="px-3 py-2.5">Amount</th>
+                    <th className="px-3 py-2.5">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {reservations.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-3 py-8 text-center text-sm text-[#8b97a8]">
+                        No reservations found.
+                      </td>
+                    </tr>
+                  ) : (
+                    reservations.map((item) => (
+                      <tr key={item.id} className="border-b border-[#f1f5f9] transition hover:bg-[#fcfdff]">
+                        <td className="px-3 py-3 text-[#667085]">{shortId(item.id)}</td>
+                        <td className="px-3 py-3 text-[#475467]">
+                          {item.user_name || item.user_email || shortId(item.user_id)}
+                        </td>
+                        <td className="px-3 py-3 text-[#475467]">{item.restaurant_name || shortId(item.restaurant_id)}</td>
+                        <td className="px-3 py-3 text-[#475467]">
+                          {item.date} {item.time}
+                        </td>
+                        <td className="px-3 py-3 text-[#475467]">{item.guests}</td>
+                        <td className="px-3 py-3">
+                          <select
+                            value={statusDraftByReservationId[item.id] ?? item.status}
+                            onChange={(event) =>
+                              setStatusDraftByReservationId((prev) => ({
+                                ...prev,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            className={`${selectClass} rounded-lg px-2 py-1 text-xs`}
+                          >
+                            <option value="pending">pending</option>
+                            <option value="confirmed">confirmed</option>
+                            <option value="declined">declined</option>
+                            <option value="cancelled">cancelled</option>
+                            <option value="completed">completed</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-3 text-[#475467]">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${paymentStatusTone(
+                              item.payment_status || "unpaid",
+                            )}`}
+                          >
+                            {toLabel(item.payment_status || "unpaid")}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-[#475467]">{toPeso(item.payment_amount ?? 0)}</td>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateReservationStatus(item.id)}
+                            disabled={updatingReservationId === item.id}
+                            className="rounded-lg border border-[#d9c3c8] bg-[#f8ecee] px-2.5 py-1 text-xs font-semibold text-[#7b2f3b] disabled:opacity-60"
+                          >
+                            {updatingReservationId === item.id ? "Saving..." : "Update"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <p className="mt-3 text-xs italic text-[#8b97a8]">
@@ -1297,22 +1602,36 @@ export default function AdminDashboardPage() {
         <section className={`mt-5 ${panelClass}`}>
           <h2 className="text-3xl text-[#1f2937]">Admin Audit Logs</h2>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3 md:hidden">
             {auditLogs.map((log) => (
               <article
                 key={log.id}
-                className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4"
+                className="rounded-2xl border border-[#e5e7eb] bg-[#fcfcfd] p-4 shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-start justify-between gap-2">
                   <div className="text-sm font-semibold text-[#1f2937]">{log.action}</div>
-                  <div className="text-xs text-[#8b97a8]">{toDateTime(log.created_at)}</div>
+                  <div className="text-[11px] text-[#8b97a8]">{toDateTime(log.created_at)}</div>
                 </div>
-                <p className="mt-1 text-xs text-[#667085]">
-                  Actor: {shortId(log.actor_id)} | Target: {log.target_type} ({shortId(log.target_id)})
-                </p>
-                <pre className="mt-2 overflow-auto rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-2 text-[11px] text-[#475467]">
-                  {JSON.stringify(log.payload ?? {}, null, 2)}
-                </pre>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Actor</div>
+                    <div className="mt-1 text-xs text-[#344054]">{shortId(log.actor_id)}</div>
+                  </div>
+                  <div className="rounded-xl border border-[#ebedf1] bg-white p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-[#98a2b3]">Target</div>
+                    <div className="mt-1 text-xs text-[#344054]">
+                      {log.target_type} ({shortId(log.target_id)})
+                    </div>
+                  </div>
+                </div>
+                <details className="mt-2 overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
+                  <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[#7b2f3b]">
+                    View payload JSON
+                  </summary>
+                  <pre className="max-h-56 overflow-auto border-t border-[#eef1f4] bg-[#f8fafc] p-2 text-[11px] text-[#475467]">
+                    {JSON.stringify(log.payload ?? {}, null, 2)}
+                  </pre>
+                </details>
               </article>
             ))}
             {auditLogs.length === 0 && (
@@ -1321,22 +1640,56 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </div>
+
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white">
+              <table className="min-w-[980px] text-sm text-[#374151]">
+                <thead className="bg-[#f8fafc]">
+                  <tr className="border-b border-[#e5e7eb] text-left text-xs uppercase tracking-wide text-[#8b97a8]">
+                    <th className="px-3 py-2.5">Action</th>
+                    <th className="px-3 py-2.5">Actor</th>
+                    <th className="px-3 py-2.5">Target</th>
+                    <th className="px-3 py-2.5">Created</th>
+                    <th className="px-3 py-2.5">Payload</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-[#8b97a8]">
+                        No audit logs available.
+                      </td>
+                    </tr>
+                  ) : (
+                    auditLogs.map((log) => (
+                      <tr key={log.id} className="border-b border-[#f1f5f9] align-top transition hover:bg-[#fcfdff]">
+                        <td className="px-3 py-3 font-semibold text-[#1f2937]">{log.action}</td>
+                        <td className="px-3 py-3 text-[#475467]">{shortId(log.actor_id)}</td>
+                        <td className="px-3 py-3 text-[#475467]">
+                          {log.target_type} ({shortId(log.target_id)})
+                        </td>
+                        <td className="px-3 py-3 text-[#667085]">{toDateTime(log.created_at)}</td>
+                        <td className="px-3 py-3">
+                          <details className="w-full overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
+                            <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[#7b2f3b]">
+                              View JSON
+                            </summary>
+                            <pre className="max-h-52 overflow-auto border-t border-[#eef1f4] bg-[#f8fafc] p-2 text-[11px] text-[#475467]">
+                              {JSON.stringify(log.payload ?? {}, null, 2)}
+                            </pre>
+                          </details>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
       )}
     </div>
   );
   }
-
-
-
-
-
-
-
-
-
-
-
-
 
 

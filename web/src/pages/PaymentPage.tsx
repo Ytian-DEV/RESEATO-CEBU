@@ -144,7 +144,7 @@ export default function PaymentPage() {
 
   if (!reservationId) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <section className="mx-auto max-w-5xl px-6 py-10">
           <div className="rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] p-6 text-[#9f1239]">
             Invalid reservation.
@@ -156,7 +156,7 @@ export default function PaymentPage() {
 
   if (loading) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
         <div className="pointer-events-none absolute -left-20 -top-16 h-64 w-64 rounded-full bg-[#f2dde2] blur-3xl" />
         <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-[#f8ecee] blur-3xl" />
 
@@ -208,7 +208,7 @@ export default function PaymentPage() {
 
   if (!details) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <section className="mx-auto max-w-5xl px-6 py-10">
           <div className="rounded-2xl border border-[#f0cdd4] bg-[#fff6f7] p-6 text-[#9f1239]">
             <p>{message ?? "Reservation payment details are not available."}</p>
@@ -228,7 +228,7 @@ export default function PaymentPage() {
   const paymentLocked = paymentDone || submitting;
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
       <section className="mx-auto max-w-5xl px-6 pb-12 pt-8">
         <button
           onClick={() => navigate(-1)}
@@ -390,3 +390,5 @@ export default function PaymentPage() {
     </div>
   );
 }
+
+

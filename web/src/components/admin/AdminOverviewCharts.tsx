@@ -76,10 +76,10 @@ export function ReservationsLineChart({ points }: { points: AdminChartPoint[] })
   return (
     <div className="relative h-[280px] w-full" onMouseLeave={() => setTooltip(null)}>
       <svg viewBox={`0 0 ${width} ${height}`} className="h-[280px] w-full">
-        {line.tickValues.map((tick) => {
+        {line.tickValues.map((tick, tickIndex) => {
           const y = padY + line.innerHeight - (tick / line.maxValue) * line.innerHeight;
           return (
-            <g key={`tick-${tick}`}>
+            <g key={`tick-${tick}-${tickIndex}`}>
               <line
                 x1={padX}
                 x2={width - padX}
@@ -234,10 +234,10 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
   return (
     <div className="relative h-[280px] w-full" onMouseLeave={() => setTooltip(null)}>
       <svg viewBox={`0 0 ${width} ${height}`} className="h-[280px] w-full">
-        {bars.tickValues.map((tick) => {
+        {bars.tickValues.map((tick, tickIndex) => {
           const y = padY + bars.innerHeight - (tick / bars.maxValue) * bars.innerHeight;
           return (
-            <g key={`tick-${tick}`}>
+            <g key={`tick-${tick}-${tickIndex}`}>
               <line
                 x1={padX}
                 x2={width - padX}
@@ -337,3 +337,4 @@ export function CompletionBarChart({ points }: { points: AdminChartPoint[] }) {
     </div>
   );
 }
+

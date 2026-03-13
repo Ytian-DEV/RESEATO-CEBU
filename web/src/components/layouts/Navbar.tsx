@@ -3,8 +3,10 @@ import {
   Bell,
   CheckCheck,
   LogOut,
+  Menu,
   User,
   UtensilsCrossed,
+  X,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
@@ -17,10 +19,17 @@ import {
 } from "../../lib/api/notifications.api";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `relative rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+  `relative whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
     isActive
       ? "bg-[#f8ecee] text-[#7b2f3b]"
       : "text-[#5b6374] hover:bg-[#f7f3f4] hover:text-[#7b2f3b]"
+  }`;
+
+const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `block w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+    isActive
+      ? "bg-[#f8ecee] text-[#7b2f3b]"
+      : "text-[#4b5563] hover:bg-[#f8f3f5] hover:text-[#7b2f3b]"
   }`;
 
 type RoleKind = "guest" | "customer" | "vendor" | "admin";
@@ -119,6 +128,7 @@ export default function Navbar() {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [role, setRole] = useState("customer");
   const [profileFullName, setProfileFullName] = useState("");
   const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
@@ -128,6 +138,7 @@ export default function Navbar() {
 
   const notifRef = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const email = session?.user?.email ?? "";
   const fullName = useMemo(
@@ -164,10 +175,11 @@ export default function Navbar() {
   useEffect(() => {
     setNotifOpen(false);
     setProfileOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    function onPointerDown(event: MouseEvent) {
+    function onPointerDown(event: PointerEvent) {
       const target = event.target as Node;
 
       if (notifRef.current && !notifRef.current.contains(target)) {
@@ -177,16 +189,20 @@ export default function Navbar() {
       if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
       }
+
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setMobileMenuOpen(false);
+      }
     }
 
-    if (notifOpen || profileOpen) {
-      document.addEventListener("mousedown", onPointerDown);
+    if (notifOpen || profileOpen || mobileMenuOpen) {
+      document.addEventListener("pointerdown", onPointerDown);
     }
 
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [notifOpen, profileOpen]);
+  }, [notifOpen, profileOpen, mobileMenuOpen]);
 
   useEffect(() => {
     let alive = true;
@@ -271,11 +287,13 @@ export default function Navbar() {
   async function logout() {
     await supabase.auth.signOut();
     setProfileOpen(false);
+    setMobileMenuOpen(false);
     navigate("/log-in-sign-up");
   }
 
   function openProfilePage() {
     setProfileOpen(false);
+    setMobileMenuOpen(false);
     navigate("/profile");
   }
 
@@ -348,161 +366,229 @@ export default function Navbar() {
         backdrop-blur-xl
       "
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <button
-          onClick={handleBrandClick}
-          className="group inline-flex items-center gap-2.5 rounded-xl px-1 text-left"
-          aria-label="Go to dashboard"
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#8b3d4a] shadow-sm shadow-[#e8ccd1] transition-all duration-300 group-hover:bg-[#7b2f3b]">
-            <UtensilsCrossed className="h-5 w-5 text-white" />
-          </span>
-          <span className="text-[24px] font-semibold tracking-tight text-[#1f2937]">RESEATO</span>
-        </button>
+      <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4" ref={menuRef}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen((prev) => !prev);
+                setNotifOpen(false);
+                setProfileOpen(false);
+              }}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#e0d6d8] bg-white text-[#7b2f3b] transition hover:bg-[#f7f3f4] sm:hidden"
+              aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
 
-        <nav className="flex items-center gap-2">
-          {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className={linkClass} end={item.end}>
-              {item.label}
-            </NavLink>
-          ))}
-
-          {!session ? (
-            <NavLink to="/log-in-sign-up" className={linkClass}>
-              Login / Sign up
-            </NavLink>
-          ) : (
-            <>
-              <span className="hidden rounded-full border border-[#dfc8cd] bg-[#f8ecee] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#7b2f3b] md:inline-flex">
-                {roleLabel}
+            <button
+              onClick={handleBrandClick}
+              className="group inline-flex min-w-0 items-center gap-2 rounded-xl px-1 text-left"
+              aria-label="Go to dashboard"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#8b3d4a] shadow-sm shadow-[#e8ccd1] transition-all duration-300 group-hover:bg-[#7b2f3b] sm:h-10 sm:w-10">
+                <UtensilsCrossed className="h-5 w-5 text-white" />
               </span>
+              <span className="truncate text-[18px] font-semibold tracking-tight text-[#1f2937] sm:text-[24px]">
+                RESEATO
+              </span>
+            </button>
+          </div>
 
-              <div className="relative" ref={notifRef}>
-                <button
-                  onClick={() => {
-                    setNotifOpen((prev) => !prev);
-                    setProfileOpen(false);
-                  }}
-                  className="relative rounded-full border border-[#e0d6d8] bg-white p-2 text-[#7b2f3b] transition hover:bg-[#f7f3f4]"
-                  aria-label="Notifications"
-                >
-                  <Bell className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#d14d5b] px-1 text-[10px] font-bold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <nav className="hidden items-center gap-2 sm:flex">
+              {navItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkClass} end={item.end}>
+                  {item.label}
+                </NavLink>
+              ))}
 
-                {notifOpen && (
-                  <div className="absolute right-0 mt-3 w-96 overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)]">
-                    <div className="flex items-center justify-between border-b border-[#f0e8ea] px-5 py-4">
-                      <div className="text-lg font-semibold">Notifications</div>
-                      {unreadCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={handleMarkAllRead}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[#e8dfe2] bg-[#faf7f8] px-2.5 py-1.5 text-xs text-[#5b6374] hover:bg-[#f5eff1]"
-                        >
-                          <CheckCheck className="h-3.5 w-3.5" />
-                          Mark all read
-                        </button>
+              {!session && (
+                <NavLink to="/log-in-sign-up" className={linkClass}>
+                  Login / Sign up
+                </NavLink>
+              )}
+            </nav>
+
+            {session ? (
+              <>
+                <span className="hidden rounded-full border border-[#dfc8cd] bg-[#f8ecee] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#7b2f3b] md:inline-flex">
+                  {roleLabel}
+                </span>
+
+                <div className="relative" ref={notifRef}>
+                  <button
+                    onClick={() => {
+                      setNotifOpen((prev) => !prev);
+                      setProfileOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="relative rounded-full border border-[#e0d6d8] bg-white p-2 text-[#7b2f3b] transition hover:bg-[#f7f3f4]"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#d14d5b] px-1 text-[10px] font-bold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {notifOpen && (
+                    <div className="absolute right-0 mt-3 w-[min(22rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)] sm:w-96">
+                      <div className="flex items-center justify-between border-b border-[#f0e8ea] px-5 py-4">
+                        <div className="text-lg font-semibold">Notifications</div>
+                        {unreadCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleMarkAllRead}
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#e8dfe2] bg-[#faf7f8] px-2.5 py-1.5 text-xs text-[#5b6374] hover:bg-[#f5eff1]"
+                          >
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {loadingNotifications ? (
+                        <div className="px-6 py-6 text-sm text-[#6b7280]">Loading notifications...</div>
+                      ) : notifications.length === 0 ? (
+                        <div className="grid place-items-center gap-3 px-6 py-12 text-center">
+                          <div className="grid h-12 w-12 place-items-center rounded-full border border-[#eadde1] bg-[#f8ecee] text-[#7b2f3b]">
+                            <Bell className="h-5 w-5" />
+                          </div>
+                          <p className="text-sm text-[#6b7280]">No notifications yet</p>
+                        </div>
+                      ) : (
+                        <div className="max-h-[380px] overflow-y-auto">
+                          {notifications.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleNotificationClick(item)}
+                              className={`w-full border-b border-[#f4edf0] px-4 py-3 text-left transition hover:bg-[#faf5f7] ${
+                                item.is_read ? "bg-transparent" : "bg-[#fff8fa]"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm font-semibold text-[#1f2937]">{item.title}</p>
+                                <span className="shrink-0 text-[11px] text-[#8b97a8]">
+                                  {formatNotificationTime(item.created_at)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-[#5b6374]">{item.body}</p>
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
-
-                    {loadingNotifications ? (
-                      <div className="px-6 py-6 text-sm text-[#6b7280]">Loading notifications...</div>
-                    ) : notifications.length === 0 ? (
-                      <div className="grid place-items-center gap-3 px-6 py-12 text-center">
-                        <div className="grid h-12 w-12 place-items-center rounded-full border border-[#eadde1] bg-[#f8ecee] text-[#7b2f3b]">
-                          <Bell className="h-5 w-5" />
-                        </div>
-                        <p className="text-sm text-[#6b7280]">No notifications yet</p>
-                      </div>
-                    ) : (
-                      <div className="max-h-[380px] overflow-y-auto">
-                        {notifications.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleNotificationClick(item)}
-                            className={`w-full border-b border-[#f4edf0] px-4 py-3 text-left transition hover:bg-[#faf5f7] ${
-                              item.is_read ? "bg-transparent" : "bg-[#fff8fa]"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-sm font-semibold text-[#1f2937]">{item.title}</p>
-                              <span className="shrink-0 text-[11px] text-[#8b97a8]">
-                                {formatNotificationTime(item.created_at)}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-[#5b6374]">{item.body}</p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative" ref={profileRef}>
-                <button
-                  onClick={() => {
-                    setProfileOpen((prev) => !prev);
-                    setNotifOpen(false);
-                  }}
-                  className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-[#d8c0c6] bg-[#f8ecee] text-sm font-semibold text-[#7b2f3b] transition hover:bg-[#f4e0e5]"
-                  aria-label="Open account menu"
-                >
-                  {shouldShowAvatar ? (
-                    <img
-                      src={displayAvatarUrl}
-                      alt="Profile avatar"
-                      className="h-full w-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={() => setAvatarLoadError(true)}
-                    />
-                  ) : (
-                    initial
                   )}
-                </button>
+                </div>
 
-                {profileOpen && (
-                  <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)]">
-                    <div className="border-b border-[#f0e8ea] px-4 py-4">
-                      <p className="truncate text-base font-semibold text-[#1f2937]">
-                        {displayFullName}
-                      </p>
-                      <p className="truncate text-sm text-[#6b7280]">{email}</p>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#8b3d4a]">
-                        {roleLabel}
-                      </p>
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => {
+                      setProfileOpen((prev) => !prev);
+                      setNotifOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-[#d8c0c6] bg-[#f8ecee] text-sm font-semibold text-[#7b2f3b] transition hover:bg-[#f4e0e5]"
+                    aria-label="Open account menu"
+                  >
+                    {shouldShowAvatar ? (
+                      <img
+                        src={displayAvatarUrl}
+                        alt="Profile avatar"
+                        className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={() => setAvatarLoadError(true)}
+                      />
+                    ) : (
+                      initial
+                    )}
+                  </button>
+
+                  {profileOpen && (
+                    <div className="absolute right-0 mt-3 w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-[#eadde1] bg-white text-[#1f2937] shadow-[0_22px_48px_rgba(15,23,42,0.16)] sm:w-72">
+                      <div className="border-b border-[#f0e8ea] px-4 py-4">
+                        <p className="truncate text-base font-semibold text-[#1f2937]">
+                          {displayFullName}
+                        </p>
+                        <p className="truncate text-sm text-[#6b7280]">{email}</p>
+                        <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#8b3d4a]">
+                          {roleLabel}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={openProfilePage}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#374151] transition hover:bg-[#faf5f7]"
+                      >
+                        <User className="h-4 w-4 text-[#8b3d4a]" />
+                        My Profile
+                      </button>
+
+                      <div className="h-px bg-[#f0e8ea]" />
+
+                      <button
+                        onClick={logout}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#b42336] transition hover:bg-[#fff3f5]"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
                     </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <NavLink
+                to="/log-in-sign-up"
+                className="inline-flex rounded-xl border border-[#e0d6d8] px-3 py-2 text-sm font-semibold text-[#7b2f3b] transition hover:bg-[#f8ecee] sm:hidden"
+              >
+                Login
+              </NavLink>
+            )}
+          </div>
+        </div>
 
-                    <button
-                      onClick={openProfilePage}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#374151] transition hover:bg-[#faf5f7]"
-                    >
-                      <User className="h-4 w-4 text-[#8b3d4a]" />
-                      My Profile
-                    </button>
+        {mobileMenuOpen && (
+          <div className="mt-3 border-t border-[#efe8ea] pt-3 sm:hidden">
+            <nav className="space-y-1 rounded-2xl border border-[#eadde1] bg-white p-2 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={mobileLinkClass}
+                  end={item.end}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
 
-                    <div className="h-px bg-[#f0e8ea]" />
+              {!session && (
+                <NavLink
+                  to="/log-in-sign-up"
+                  className={mobileLinkClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Login / Sign up
+                </NavLink>
+              )}
 
-                    <button
-                      onClick={logout}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#b42336] transition hover:bg-[#fff3f5]"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </nav>
+              {session && (
+                <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#8b3d4a]">
+                  {roleLabel}
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );
 }
+
