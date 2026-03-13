@@ -71,28 +71,28 @@ export default function HomePage() {
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(43,16,20,0.58)_0%,rgba(16,11,12,0.44)_48%,rgba(14,10,10,0.74)_100%)]" />
 
       <div className="relative z-10 flex h-screen flex-col">
-        <header className="mx-auto flex w-full max-w-[1520px] items-center justify-between px-7 pt-5 sm:px-9 lg:px-10">
-          <Link to="/" className="group flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(44,42,47,0.85)] ring-1 ring-white/10 backdrop-blur transition-all duration-300 group-hover:bg-[rgba(70,52,56,0.92)]">
+        <header className="mx-auto flex w-full max-w-[1520px] items-center justify-between gap-2 px-4 pt-4 sm:px-9 sm:pt-5 lg:px-10">
+          <Link to="/" className="group flex shrink-0 items-center gap-2 sm:gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(44,42,47,0.85)] ring-1 ring-white/10 backdrop-blur transition-all duration-300 group-hover:bg-[rgba(70,52,56,0.92)] sm:h-11 sm:w-11 sm:rounded-2xl">
               <UtensilsCrossed className="h-5 w-5 text-white" />
             </div>
-            <span className="text-[clamp(1.65rem,1.55vw,2rem)] leading-none font-semibold tracking-tight text-white">
+            <span className="whitespace-nowrap text-[clamp(1.28rem,5.5vw,2rem)] leading-none font-semibold tracking-tight text-white max-[380px]:text-[1.12rem]">
               RESEATO
             </span>
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={onSignIn}
-              className="rounded-xl border border-white/35 bg-[rgba(17,17,20,0.35)] px-[0.88rem] py-[0.38rem] text-[clamp(0.88rem,0.88vw,1.1rem)] font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur hover:bg-[rgba(34,34,40,0.5)] sm:px-[1.08rem] sm:py-[0.48rem]"
+              className="shrink-0 whitespace-nowrap rounded-xl border border-white/35 bg-[rgba(17,17,20,0.35)] px-2.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur hover:bg-[rgba(34,34,40,0.5)] max-[380px]:px-2 max-[380px]:text-[0.78rem] sm:px-[1.08rem] sm:py-[0.48rem] sm:text-[clamp(0.88rem,0.88vw,1.1rem)]"
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={onGetStarted}
-              className="rounded-xl bg-gradient-to-r from-[#b46d73] to-[#923f4a] px-[1rem] py-[0.38rem] text-[clamp(0.88rem,0.88vw,1.1rem)] font-semibold text-white shadow-[0_10px_22px_rgba(116,43,53,0.42)] hover:brightness-105 sm:px-[1.22rem] sm:py-[0.48rem]"
+              className="shrink-0 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#b46d73] to-[#923f4a] px-3 py-1.5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(116,43,53,0.42)] hover:brightness-105 max-[380px]:px-2.5 max-[380px]:text-[0.78rem] sm:px-[1.22rem] sm:py-[0.48rem] sm:text-[clamp(0.88rem,0.88vw,1.1rem)]"
             >
               Get Started
             </button>
@@ -132,3 +132,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+

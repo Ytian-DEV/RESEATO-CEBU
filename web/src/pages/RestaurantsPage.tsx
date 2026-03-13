@@ -305,7 +305,7 @@ export default function RestaurantsPage() {
 
   if (!accessChecked) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-6xl items-center px-6 py-8">
           <div className="inline-flex items-center gap-2 rounded-2xl border border-[#e8e2e3] bg-white px-4 py-3 text-sm text-[#5b6374] shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <UtensilsCrossed className="h-4 w-4 text-[#8b3d4a]" />
@@ -317,7 +317,7 @@ export default function RestaurantsPage() {
   }
   if (loading) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full overflow-hidden bg-[#f3f3f4] text-[#1f2937]">
         <div className="pointer-events-none absolute -left-20 -top-16 h-64 w-64 rounded-full bg-[#f2dde2] blur-3xl" />
         <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-[#f8ecee] blur-3xl" />
 
@@ -378,7 +378,7 @@ export default function RestaurantsPage() {
 
   if (error) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="rounded-3xl border border-[#f2cccf] bg-[#fff6f7] p-4 text-[#9f1239]">
             {error}
@@ -389,8 +389,8 @@ export default function RestaurantsPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
-      <section className="mx-auto max-w-6xl space-y-7 px-6 py-8">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
+      <section className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -405,7 +405,7 @@ export default function RestaurantsPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/84 via-black/66 to-black/52" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(0,0,0,0.44),transparent_58%)]" />
 
-          <div className="relative flex h-full flex-col justify-center px-7 sm:px-8">
+          <div className="relative flex h-full flex-col justify-center px-5 sm:px-8">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/90">
               Browse Restaurants
             </div>
@@ -478,9 +478,9 @@ export default function RestaurantsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.08 }}
         >
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <h2 className="text-[35px] font-semibold tracking-tight text-[#1f2937]">Recommended Restaurants</h2>
-            <div className="text-sm text-[#7b8498]">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2 sm:gap-3">
+            <h2 className="min-w-0 text-[32px] font-semibold leading-[1.08] tracking-tight text-[#1f2937] sm:text-[35px]">Recommended Restaurants</h2>
+            <div className="shrink-0 text-xs text-[#7b8498] sm:text-sm">
               Showing {filtered.length} result{filtered.length === 1 ? "" : "s"}
             </div>
           </div>
@@ -491,7 +491,7 @@ export default function RestaurantsPage() {
               <p className="mt-2 text-sm text-[#98a2b3]">Try adjusting your filters or search term</p>
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
               {filtered.map((r, idx) => (
                 <motion.div
                   key={r.id}
@@ -503,7 +503,7 @@ export default function RestaurantsPage() {
                     delay: Math.min(idx * 0.02, 0.12),
                     ease: "easeOut",
                   }}
-                  className="rounded-2xl transition"
+                  className="min-w-0 rounded-2xl transition"
                 >
                   <RestaurantCard r={r} />
                 </motion.div>
@@ -515,7 +515,5 @@ export default function RestaurantsPage() {
     </div>
   );
 }
-
-
 
 

@@ -306,7 +306,7 @@ export default function VendorBestSellersPage() {
 
   if (authLoading) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="inline-flex items-center gap-2 text-[#5b6374]">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -319,7 +319,7 @@ export default function VendorBestSellersPage() {
 
   if (!isAuthed) {
     return (
-      <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+      <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="rounded-3xl border border-[#e8e2e3] bg-white p-6 text-[#4b5563]">
             Login is required to manage best sellers.
@@ -330,7 +330,7 @@ export default function VendorBestSellersPage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 min-h-[calc(100vh-72px)] w-screen -translate-x-1/2 bg-[#f3f3f4] text-[#1f2937]">
+    <div className="relative min-h-[calc(100vh-72px)] w-full bg-[#f3f3f4] text-[#1f2937]">
       <div className="mx-auto max-w-6xl px-6 py-8">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -637,5 +637,4 @@ export default function VendorBestSellersPage() {
     </div>
   );
 }
-
 
